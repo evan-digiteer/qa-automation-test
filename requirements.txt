@@ -1,0 +1,6 @@
+selenium==4.11.2
+pytest==7.4.0
+pytest-html==3.2.0
+python-dotenv==1.0.0
+webdriver-manager==4.0.0
+logging==0.4.9.6
