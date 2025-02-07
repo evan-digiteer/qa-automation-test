@@ -1,4 +1,5 @@
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 from .base_page import BasePage
 
 class UsersPage(BasePage):
@@ -21,9 +22,11 @@ class UsersPage(BasePage):
     EDIT_BUTTON = (By.CSS_SELECTOR, 'a.table__action[data-bs-title="Edit"]')
 
     # Pagination
-    PAGINATION = (By.CLASS_NAME, 'pagy-nav')
-    NEXT_PAGE = (By.CSS_SELECTOR, '.page.next a')
-    PREV_PAGE = (By.CSS_SELECTOR, '.page.prev')
+    PAGINATION_NAV = (By.CLASS_NAME, 'pagy-nav')
+    NEXT_PAGE = (By.CSS_SELECTOR, '.page.next a[data-turbo-action="advance"]')
+    PREV_PAGE = (By.CSS_SELECTOR, '.page.prev:not(.disabled)')
+    CURRENT_PAGE = (By.CSS_SELECTOR, '.page.active')
+    PAGE_NUMBER_LINKS = (By.CSS_SELECTOR, '.page a[data-turbo-action="advance"]')
 
     def sort_by_column(self, column_type):
         """Sort table by column type (1=Name, 2=Email, 3=Role, 4=Status)"""
@@ -56,10 +59,38 @@ class UsersPage(BasePage):
         """Get only inactive users"""
         return [user for user in self.get_all_users() if 'Inactive' in user['status']]
 
+    def get_current_page_number(self):
+        """Get current page number"""
+        try:
+            return int(self.find_element(self.CURRENT_PAGE).text)
+        except:
+            return 1
+
+    def get_total_pages(self):
+        """Get total number of pages"""
+        try:
+            # Get all page links including both numbers and next/prev
+            page_links = self.find_elements((By.CSS_SELECTOR, '.pagy-nav .page'))
+            # Filter to only numbered pages (exclude next/prev)
+            numbered_pages = [link for link in page_links if link.text.isdigit()]
+            if numbered_pages:
+                return max([int(link.text) for link in numbered_pages])
+            return 1
+        except Exception as e:
+            self.logger.error(f"Error getting total pages: {str(e)}")
+            return 1
+
     def has_next_page(self):
         """Check if there's a next page"""
         try:
-            return self.find_element(self.NEXT_PAGE).is_displayed()
+            return bool(self.find_element(self.NEXT_PAGE))
+        except:
+            return False
+
+    def has_previous_page(self):
+        """Check if there's a previous page"""
+        try:
+            return bool(self.find_element(self.PREV_PAGE))
         except:
             return False
 
@@ -73,18 +104,81 @@ class UsersPage(BasePage):
         """Get all user rows from the table"""
         return self.find_elements(self.USER_ROW)
 
-    def get_user_by_email(self, email):
-        """Find a user row by email"""
-        users = self.get_user_rows()
-        for user in users:
-            user_email = user.find_element(*self.USER_EMAIL).text
-            if user_email == email:
-                return user
+    def get_user_by_email(self, email, check_all_pages=True):
+        """Find a user row by email, optionally checking all pages"""
+        self.wait_for_users_table()  # Wait for table to load
+        start_page = self.get_current_page_number()
+        total_pages = self.get_total_pages()
+        checked_pages = []
+        
+        while True:
+            try:
+                current_page = self.get_current_page_number()
+                checked_pages.append(current_page)
+                self.logger.info(f"Checking page {current_page} of {total_pages} for user {email}")
+                
+                # Wait for and get user rows
+                users = self.wait.until(
+                    EC.presence_of_all_elements_located(self.USER_ROW)
+                )
+                
+                # Check each row
+                for user in users:
+                    try:
+                        user_email = user.find_element(*self.USER_EMAIL).text
+                        if user_email == email:
+                            # Wait for row to be fully loaded
+                            self.wait.until(
+                                EC.presence_of_element_located(self.USER_ROLE)
+                            )
+                            return user
+                    except:
+                        continue
+                
+                # Try next page if needed
+                if check_all_pages and current_page < total_pages:
+                    if not self.click_next_page():
+                        break
+                else:
+                    break
+                    
+            except Exception as e:
+                self.logger.error(f"Error during user search: {str(e)}")
+                break
+        
         return None
 
+    def click_next_page(self):
+        """Click next page if available"""
+        try:
+            if self.has_next_page():
+                self.logger.info("Clicking next page button")
+                # Wait for and find the next page link
+                next_button = self.wait.until(
+                    EC.element_to_be_clickable(self.NEXT_PAGE)
+                )
+                # Get the href attribute
+                next_url = next_button.get_attribute('href')
+                self.logger.info(f"Navigating to: {next_url}")
+                # Use driver.get() instead of click()
+                self.driver.get(next_url)
+                self.wait_for_users_table()
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Failed to navigate to next page: {str(e)}")
+            return False
+
     def is_user_present(self, email):
-        """Check if a user exists in the table"""
-        return bool(self.get_user_by_email(email))
+        """Check if a user exists in the table (checks all pages)"""
+        try:
+            user = self.get_user_by_email(email, check_all_pages=True)
+            exists = user is not None
+            self.logger.info(f"User {email} {'found' if exists else 'not found'} in table")
+            return exists
+        except Exception as e:
+            self.logger.error(f"Error checking for user {email}: {str(e)}")
+            return False
 
     def click_user_row(self, email):
         """Click on a user row by email"""
@@ -97,9 +191,15 @@ class UsersPage(BasePage):
         return False
 
     def wait_for_users_table(self):
-        """Wait for users table to be loaded"""
+        """Wait for users table to be loaded and ready"""
         self.logger.info("Waiting for users table to load")
-        return self.find_element(self.TABLE)
+        self.wait.until(
+            EC.presence_of_element_located(self.TABLE)
+        )
+        self.wait.until(
+            EC.presence_of_element_located(self.USER_ROW)
+        )
+        return True
 
     def is_on_users_page(self):
         """Verify we're on the Users page"""
