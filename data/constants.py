@@ -1,7 +1,7 @@
 class URLs:
     LOGIN_PAGE = "/login"
     DASHBOARD = "/dashboard"
-    PROFILE = "/profile"
+    USERS_PAGE = "/users"
 
 class ValidationData:
     INVALID_EMAILS = [
@@ -20,6 +20,24 @@ class ValidationData:
         "<script>alert(1)</script>",  # XSS attempt
     ]
 
+    USER_ROLES = [
+        "Administrator"
+    ]
+
+    USER_STATUSES = {
+        "ACTIVE": "Active",
+        "INACTIVE": "Inactive"
+    }
+
+    USER_MESSAGES = {
+        "USER_CREATED": "User was successfully created",
+        "USER_UPDATED": "User was successfully updated",
+        "USER_DELETED": "User was successfully deleted",
+        "REQUIRED_FIELD": "This field is required",
+        "INVALID_EMAIL": "Please enter a valid email address",
+        "DUPLICATE_EMAIL": "Email has already been taken"
+    }
+
     ERROR_MESSAGES = {
         "REQUIRED_FIELD": "This field is required",
         "INVALID_EMAIL": "Please enter a valid email address",
@@ -34,3 +52,18 @@ class ExpectedElements:
         "password_placeholder": "Enter password",
         "login_button_text": "Sign In"
     }
+
+    USERS_PAGE = {
+        "title": "Users",
+        "table_headers": ["Name", "Email", "Role", "Status", "Action"],
+        "status_badges": {
+            "active": "badge--success",
+            "inactive": "badge--danger"
+        }
+    }
+
+class TableColumns:
+    NAME = "1"
+    EMAIL = "2"
+    ROLE = "3"
+    STATUS = "4"
