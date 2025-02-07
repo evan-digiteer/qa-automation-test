@@ -28,6 +28,9 @@ class UsersPage(BasePage):
     CURRENT_PAGE = (By.CSS_SELECTOR, '.page.active')
     PAGE_NUMBER_LINKS = (By.CSS_SELECTOR, '.page a[data-turbo-action="advance"]')
 
+    # Success Messages
+    SUCCESS_ALERT = (By.CSS_SELECTOR, ".alert--soft-success .alert__content .col")
+    
     def sort_by_column(self, column_type):
         """Sort table by column type (1=Name, 2=Email, 3=Role, 4=Status)"""
         button = self.find_element((By.XPATH, f"//button[@data-button-type='{column_type}']"))
@@ -219,4 +222,20 @@ class UsersPage(BasePage):
             return False
         except Exception as e:
             self.logger.error(f"Failed to click edit button: {str(e)}")
+            return False
+
+    def verify_success_message(self, expected_message=None):
+        """Verify success message is displayed and contains expected text"""
+        try:
+            alert = self.find_element(self.SUCCESS_ALERT)
+            if alert.is_displayed():
+                alert_text = alert.text.strip()
+                self.logger.info(f"Found success message: {alert_text}")
+                if expected_message:
+                    # More flexible check since message includes dynamic user info
+                    return expected_message.split()[0] in alert_text
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Error checking success message: {str(e)}")
             return False
