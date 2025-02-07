@@ -1,5 +1,6 @@
 from selenium.webdriver.common.by import By
 from .base_page import BasePage
+from data.constants import ValidationData, ExpectedElements
 
 class LoginPage(BasePage):
     # Class level locators using UPPERCASE for constants
@@ -9,7 +10,7 @@ class LoginPage(BasePage):
     FIELD_GROUP = (By.CLASS_NAME, 'field-group')
     INLINE_ERROR = (By.CLASS_NAME, 'field-helper')
 
-    REQUIRED_FIELD_ERROR = "This field is required"
+    REQUIRED_FIELD_ERROR = ValidationData.ERROR_MESSAGES["REQUIRED_FIELD"]
 
     def login(self, username, password):
         self.type(self.EMAIL_INPUT, username)
@@ -50,3 +51,12 @@ class LoginPage(BasePage):
             return field_group.find_element(*self.INLINE_ERROR).text.strip()
         except:
             return None
+
+    def verify_page_elements(self):
+        """Verify all expected elements are present with correct text"""
+        expected = ExpectedElements.LOGIN_PAGE
+        assert self.driver.title == expected["title"], "Page title is incorrect"
+        assert self.find_element(self.EMAIL_INPUT).get_attribute("placeholder") == expected["email_placeholder"]
+        assert self.find_element(self.PASSWORD_INPUT).get_attribute("placeholder") == expected["password_placeholder"]
+        assert self.find_element(self.LOGIN_BUTTON).text == expected["login_button_text"]
+        return True
