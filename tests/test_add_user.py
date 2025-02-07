@@ -69,3 +69,35 @@ class TestAddUser:
         
         user_role = user_row.find_element(*self.users_page.USER_ROLE).text
         assert user_role == role, f"User role mismatch. Expected: {role}, Got: {user_role}"
+
+    def test_duplicate_email_validation(self):
+        """Test that duplicate email addresses are not allowed"""
+        # Create first user with generated data
+        user_data = {
+            'first_name': self.add_user_page.faker.first_name(),
+            'last_name': self.add_user_page.faker.last_name(),
+            'email': self.add_user_page.faker.email(),
+            'role': 'Administrator',
+            'is_active': True
+        }
+        
+        # Create first user and verify success
+        self.add_user_page.create_user(user_data)
+        assert self.users_page.is_user_present(user_data['email']), \
+            "First user creation failed"
+        
+        # Try to create second user with same email
+        self.users_page.click(self.users_page.ADD_USER_BUTTON)
+        duplicate_data = user_data.copy()
+        duplicate_data.update({
+            'first_name': self.add_user_page.faker.first_name(),
+            'last_name': self.add_user_page.faker.last_name()
+        })
+        
+        self.add_user_page.fill_user_form(duplicate_data)
+        self.add_user_page.save_user()
+        
+        # Verify correct error message appears
+        assert self.add_user_page.is_error_message_displayed(
+            ValidationData.USER_MESSAGES["DUPLICATE_EMAIL"]
+        ), "Duplicate email validation message not displayed"

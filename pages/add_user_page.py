@@ -21,6 +21,9 @@ class AddUserPage(BasePage):
     INLINE_ERROR = (By.CLASS_NAME, 'field-helper')
     REQUIRED_FIELD_ERROR = ValidationData.ERROR_MESSAGES["REQUIRED_FIELD"]
     
+    # Alert Messages
+    ALERT_MESSAGE = (By.CSS_SELECTOR, ".alert--soft-danger ul li")
+    
     def __init__(self, driver):
         super().__init__(driver)
         self.faker = Faker()
@@ -73,23 +76,35 @@ class AddUserPage(BasePage):
         """Get the text of inline error message if present"""
         return self.get_text(self.INLINE_ERROR)
 
-    def is_error_message_displayed(self):
-        """Check if any error message is displayed for any field"""
+    def is_error_message_displayed(self, expected_message=None):
+        """Check for error message in alert or inline validation"""
         try:
-            self.logger.info("Checking for error messages on the user form")
-            field_groups = self.find_elements(self.FIELD_GROUP)
-            
-            for field_group in field_groups:
-                try:
-                    inline_error = field_group.find_element(*self.INLINE_ERROR)
-                    if inline_error.is_displayed() and inline_error.text.strip() == self.REQUIRED_FIELD_ERROR:
-                        self.logger.warning(f"Error message displayed: {inline_error.text}")
-                        return True
-                except:
-                    continue
-            
-            self.logger.info("No error message displayed")
+            # Check for alert message first
+            try:
+                alert = self.find_element(self.ALERT_MESSAGE)
+                if alert.is_displayed():
+                    error_text = alert.text.strip()
+                    self.logger.info(f"Found alert message: {error_text}")
+                    if expected_message:
+                        return error_text == expected_message
+                    return True
+            except:
+                # If no alert, check inline errors
+                self.logger.info("No alert message found, checking inline errors")
+                for field_group in self.find_elements(self.FIELD_GROUP):
+                    try:
+                        inline_error = field_group.find_element(*self.INLINE_ERROR)
+                        if inline_error.is_displayed():
+                            error_text = inline_error.text.strip()
+                            self.logger.info(f"Found inline error: {error_text}")
+                            if expected_message:
+                                return error_text == expected_message
+                            return True
+                    except:
+                        continue
+                
+            self.logger.info("No error messages found")
             return False
         except Exception as e:
-            self.logger.error(f"Error checking for error message: {str(e)}")
+            self.logger.error(f"Error checking for messages: {str(e)}")
             return False
