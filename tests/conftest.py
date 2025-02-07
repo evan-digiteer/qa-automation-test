@@ -46,6 +46,19 @@ def driver(request):
     request.addfinalizer(teardown)
     return driver
 
+def pytest_configure(config):
+    """Configure test session - runs before any tests"""
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    report_name = f"report_{timestamp}.html"
+    
+    # Create reports directory if it doesn't exist
+    if not os.path.exists("reports"):
+        os.makedirs("reports")
+    
+    # Set the HTML report path
+    config.option.htmlpath = os.path.join("reports", report_name)
+    print(f"\nHTML report will be generated at: {config.option.htmlpath}")
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
