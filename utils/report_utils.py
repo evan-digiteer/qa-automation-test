@@ -85,7 +85,7 @@ def create_test_case_html(name, status, duration, error=None, screenshot_path=No
                     <div class="screenshot-section">
                         <h4>Screenshot:</h4>
                         <img class="screenshot" src="data:image/png;base64,{base64_image}" 
-                             alt="Test Screenshot" onclick="window.open(this.src)" 
+                             alt="Test Screenshot" 
                              style="cursor: pointer"/>
                     </div>
                     ''')
