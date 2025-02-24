@@ -5,6 +5,7 @@ from datetime import datetime
 from utils.webdriver_factory import WebDriverFactory
 from utils.report_utils import create_test_case_html, TestCaseLogHandler
 from config.config import Config
+from string import Template
 
 def setup_logger():
     """Configure root logger"""
@@ -116,7 +117,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         template_path = os.path.join(os.path.dirname(__file__), '..', 'templates', 'report_template.html')
         
         with open(template_path, 'r', encoding='utf-8') as f:
-            template = f.read()
+            template = Template(f.read())
         
         test_cases_html = []
         for nodeid, data in pytest.test_data.items():
@@ -150,8 +151,10 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
             'test_cases': '\n'.join(test_cases_html)
         }
         
-        # Generate and save report
-        html_report = template % report_data
+        # Generate report using safe substitution
+        html_report = template.safe_substitute(report_data)
+        
+        # Save the report
         report_dir = "reports"
         if not os.path.exists(report_dir):
             os.makedirs(report_dir)
