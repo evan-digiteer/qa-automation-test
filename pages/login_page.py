@@ -24,6 +24,23 @@ class LoginPage(BasePage):
     # Error Elements
     ERROR_ALERT = (By.XPATH, "//div[contains(@class, 'alert--danger')]//div[@class='col']")
 
+    # Password visibility
+    SHOW_PASSWORD_BUTTON = (By.CSS_SELECTOR, 'button[data-controller="admin--show-password"]')
+
+    def toggle_password_visibility(self):
+        """Toggle password field visibility"""
+        try:
+            self.logger.info("Toggling password visibility")
+            show_button = self.find_element(self.SHOW_PASSWORD_BUTTON)
+            self.click(self.SHOW_PASSWORD_BUTTON)
+            
+            # Get password field type after toggle
+            password_field = self.find_element(self.PASSWORD_INPUT)
+            return password_field.get_attribute("type")
+        except Exception as e:
+            self.logger.error(f"Error toggling password visibility: {str(e)}")
+            return None
+
     # Basic Actions
     def login(self, username, password):
         """Perform login with given credentials"""

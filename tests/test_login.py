@@ -68,3 +68,17 @@ class TestLogin:
         
         assert URLs.LOGIN_PAGE in self.driver.current_url, "Browser back after logout allowed access to protected page"
 
+    def test_password_visibility_toggle(self):
+        """Test the show/hide password functionality"""
+        # Initial state should be password hidden
+        password_field = self.login_page.find_element(self.login_page.PASSWORD_INPUT)
+        assert password_field.get_attribute("type") == "password", "Password should be hidden by default"
+        
+        # Click show password button
+        initial_type = self.login_page.toggle_password_visibility()
+        assert initial_type == "text", "Password should be visible after first toggle"
+        
+        # Click hide password button
+        final_type = self.login_page.toggle_password_visibility()
+        assert final_type == "password", "Password should be hidden after second toggle"
+
