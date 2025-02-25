@@ -155,6 +155,11 @@ class CategoriesPage(BasePage):
         try:
             self.logger.info("Attempting to navigate to new category page")
             
+            # Wait for page to be fully loaded first
+            self.wait.until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+            
             # Wait for button to be clickable
             button = self.wait.until(EC.element_to_be_clickable(self.NEW_CATEGORY_BUTTON))
             
@@ -167,10 +172,12 @@ class CategoriesPage(BasePage):
             # Wait for URL to change
             self.wait.until(EC.url_changes(original_url))
             
-            # Additional wait for new page load
+            # Wait for add category page to load
             self.wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
             
-            # Verify URL contains expected path
+            # Additional wait for all elements to be present
+            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, ".card__content")))
+            
             current_url = self.driver.current_url
             self.logger.info(f"Navigated to: {current_url}")
             
