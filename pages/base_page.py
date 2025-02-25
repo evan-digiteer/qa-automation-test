@@ -2,6 +2,7 @@ import logging
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver.support.ui import Select
 
 class BasePage:
     def __init__(self, driver):
@@ -37,4 +38,15 @@ class BasePage:
             return self.wait.until(EC.visibility_of_element_located(locator))
         except (TimeoutException, NoSuchElementException) as e:
             self.logger.error(f"Element not visible: {str(e)}")
+            return False
+
+    def select_by_value(self, locator, value):
+        """Select dropdown option by value"""
+        try:
+            element = self.find_element(locator)
+            select = Select(element)
+            select.select_by_value(value)
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to select value {value}: {str(e)}")
             return False
