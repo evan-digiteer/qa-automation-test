@@ -10,7 +10,7 @@ class LoginPage(BasePage):
     LOGIN_BUTTON = (By.XPATH, '//button[contains(@class, "btn--primary") and contains(@class, "btn--lg")]')
     FORGOT_PASSWORD_LINK = (By.XPATH, "//a[contains(@href, '/admin/forgot/new')]")
     
-    # Update Logout Elements
+    # Logout Elements
     PROFILE_DROPDOWN = (By.XPATH, '//button[contains(@class, "header__dropdown-btn") and @data-bs-toggle="dropdown"]')
     LOGOUT_BUTTON = (By.XPATH, '//button[@class="dropdown-menu__link" and contains(text(), "Log Out")]')
     
@@ -20,21 +20,9 @@ class LoginPage(BasePage):
     
     # Error Messages
     REQUIRED_FIELD_ERROR = ValidationData.ERROR_MESSAGES["REQUIRED_FIELD"]
-
-    # Add new element locators
-    EMAIL_LABEL = (By.XPATH, "//label[@for='user_email']")
-    PASSWORD_LABEL = (By.XPATH, "//label[@for='user_password']")
-    LOGIN_CONTAINER = (By.CLASS_NAME, "login-container")
-    LOGIN_FORM = (By.TAG_NAME, "form")
-
-    # Update locators to match HTML structure
-    CARD_CONTENT = (By.CLASS_NAME, "card__content")
-    LOGIN_FORM = (By.CLASS_NAME, "new_user")
-    LOGO_IMAGE = (By.CSS_SELECTOR, "img[alt='alt']")
-    LOGIN_HEADING = (By.CSS_SELECTOR, "h6")
-    EMAIL_LABEL = (By.XPATH, "//label[contains(@class, 'label--required') and text()='Email']")
-    PASSWORD_LABEL = (By.XPATH, "//label[contains(@class, 'label--required') and text()='Password']")
-    SHOW_PASSWORD_BUTTON = (By.CSS_SELECTOR, "button[data-controller='admin--show-password']")
+    
+    # Error Elements
+    ERROR_ALERT = (By.XPATH, "//div[contains(@class, 'alert--danger')]//div[@class='col']")
 
     # Basic Actions
     def login(self, username, password):
@@ -71,16 +59,29 @@ class LoginPage(BasePage):
         return self.get_text(self.INLINE_ERROR)
 
     def is_error_message_displayed(self):
-        """Check if any error message is displayed for username or password"""
+        """Check if any error message is displayed (inline or alert)"""
         try:
             self.logger.info("Checking for error messages on the login form")
-            field_groups = self.find_elements(self.FIELD_GROUP)
             
+            # Check for alert error
+            try:
+                error_alert = self.find_element(self.ERROR_ALERT)
+                if error_alert.is_displayed():
+                    actual_text = error_alert.text.strip().lower().replace('.', '')
+                    expected_text = ValidationData.ERROR_MESSAGES["INVALID_CREDENTIALS"].lower().replace('.', '')
+                    if actual_text == expected_text:
+                        self.logger.warning(f"Alert error displayed: {error_alert.text}")
+                        return True
+            except:
+                pass
+            
+            # Check for inline errors
+            field_groups = self.find_elements(self.FIELD_GROUP)
             for field_group in field_groups:
                 try:
                     inline_error = field_group.find_element(*self.INLINE_ERROR)
                     if inline_error.is_displayed() and inline_error.text.strip() == self.REQUIRED_FIELD_ERROR:
-                        self.logger.warning(f"Error message displayed: {inline_error.text}")
+                        self.logger.warning(f"Inline error displayed: {inline_error.text}")
                         return True
                 except:
                     continue
