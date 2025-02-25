@@ -1,4 +1,5 @@
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 from .base_page import BasePage
 from data.constants import ValidationData, ExpectedElements
 
@@ -7,6 +8,10 @@ class LoginPage(BasePage):
     EMAIL_INPUT = (By.ID, "user_email")
     PASSWORD_INPUT = (By.ID, "user_password")
     LOGIN_BUTTON = (By.XPATH, '//button[contains(@class, "btn--primary") and contains(@class, "btn--lg")]')
+    
+    # Update Logout Elements
+    PROFILE_DROPDOWN = (By.XPATH, '//button[contains(@class, "header__dropdown-btn") and @data-bs-toggle="dropdown"]')
+    LOGOUT_BUTTON = (By.XPATH, '//button[@class="dropdown-menu__link" and contains(text(), "Log Out")]')
     
     # Validation Elements
     FIELD_GROUP = (By.CLASS_NAME, 'field-group')
@@ -21,6 +26,28 @@ class LoginPage(BasePage):
         self.type(self.EMAIL_INPUT, username)
         self.type(self.PASSWORD_INPUT, password)
         self.click(self.LOGIN_BUTTON)
+
+    def logout(self):
+        """Perform logout action with proper waits"""
+        try:
+            self.logger.info("Attempting to logout")
+            # Wait for page to be fully loaded before attempting logout
+            self.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+            
+            # Wait for dropdown to be clickable and click it
+            self.wait.until(EC.element_to_be_clickable(self.PROFILE_DROPDOWN))
+            self.click(self.PROFILE_DROPDOWN)
+            
+            # Wait for logout button to be clickable and click it
+            self.wait.until(EC.element_to_be_clickable(self.LOGOUT_BUTTON))
+            self.click(self.LOGOUT_BUTTON)
+            
+            # Wait for redirect to login page
+            self.wait.until(EC.url_contains("login"))
+            return True
+        except Exception as e:
+            self.logger.error(f"Error during logout: {str(e)}")
+            return False
 
     # Error Handling and Validation
     def get_inline_error(self):
