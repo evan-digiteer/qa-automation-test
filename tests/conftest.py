@@ -7,6 +7,8 @@ from string import Template
 from utils.webdriver_factory import WebDriverFactory
 from utils.report_utils import ReportGenerator, TestCaseLogHandler
 from config.config import Config
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 # Initialize report generator
 report_generator = ReportGenerator()
@@ -80,20 +82,18 @@ def test_logging(request):
 @pytest.fixture(scope="function")
 def driver(request):
     """Browser fixture with screenshot capture"""
-    driver = WebDriverFactory.get_driver()
-    driver.maximize_window()
+    # Create driver using factory
+    driver = WebDriverFactory.create_driver()
     
     yield driver
     
     try:
-        # Always take screenshot at test end
+        # Take screenshot at test end
         screenshot_path = take_screenshot(driver, request.node.name)
-        # Initialize test data if not exists
         if request.node.nodeid not in pytest.test_data:
             pytest.test_data[request.node.nodeid] = {}
-        
         pytest.test_data[request.node.nodeid]['screenshot'] = screenshot_path
-        logging.info(f"Screenshot saved for {request.node.name}: {screenshot_path}")
+        
     except Exception as e:
         logging.error(f"Screenshot failed for {request.node.name}: {str(e)}")
     finally:
