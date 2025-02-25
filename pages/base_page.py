@@ -1,7 +1,7 @@
 import logging
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 class BasePage:
     def __init__(self, driver):
@@ -30,3 +30,11 @@ class BasePage:
 
     def get_text(self, locator):
         return self.find_element(locator).text
+
+    def is_element_visible(self, locator):
+        """Check if element is visible"""
+        try:
+            return self.wait.until(EC.visibility_of_element_located(locator))
+        except (TimeoutException, NoSuchElementException) as e:
+            self.logger.error(f"Element not visible: {str(e)}")
+            return False
