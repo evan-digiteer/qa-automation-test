@@ -47,10 +47,15 @@ class ValidationData:
 
 class ExpectedElements:
     LOGIN_PAGE = {
-        "title": "Login",
+        "title": "Log In",  
         "email_placeholder": "Enter your email address",
         "password_placeholder": "Enter password",
-        "login_button_text": "Sign In"
+        "login_button_text": "Log In",
+        "email_label": "Email",
+        "password_label": "Password",
+        "heading_text": "Login",
+        "forgot_password_text": "Forgot your password?",
+        "email_error_text": "Invalid email address"
     }
 
     USERS_PAGE = {
