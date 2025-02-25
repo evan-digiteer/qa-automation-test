@@ -72,3 +72,34 @@ class TableColumns:
     EMAIL = "2"
     ROLE = "3"
     STATUS = "4"
+
+class CategoryPage:
+    TITLE = "Categories"
+    SORT_OPTIONS = {
+        "NAME_ASC": "name asc",  # Maps to "Category Name A-Z"
+        "NAME_DESC": "name desc",  # Maps to "Category Name Z-A"
+        "ORDER_ASC": "sort_order asc",  # Maps to "Sort Order Ascending"
+        "ORDER_DESC": "sort_order desc"  # Maps to "Sort Order Descending"
+    }
+    SORT_LABELS = {
+        "NAME_ASC": "Category Name A-Z",
+        "NAME_DESC": "Category Name Z-A",
+        "ORDER_ASC": "Sort Order Ascending",
+        "ORDER_DESC": "Sort Order Descending"
+    }
+    ITEMS_PER_PAGE_OPTIONS = [10, 25, 50]
+    URLS = {
+        "NEW": "/admin/categories/new",
+        "LIST": "/admin/categories",
+        "EDIT": "/admin/categories/{id}/edit"
+    }
+    STATUS = {
+        "ACTIVE": "Active",
+        "INACTIVE": "Inactive"
+    }
+    TABLE_HEADERS = ["Category Name", "Sort Order", "Status", "Action"]
+    MESSAGES = {
+        "CREATED": "Category was successfully created",
+        "UPDATED": "Category was successfully updated",
+        "DELETED": "Category was successfully deleted"
+    }
