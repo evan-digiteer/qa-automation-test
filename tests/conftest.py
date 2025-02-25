@@ -2,18 +2,28 @@ import pytest
 import logging
 import os
 from datetime import datetime
-from utils.webdriver_factory import WebDriverFactory
-from utils.report_utils import create_test_case_html, TestCaseLogHandler
-from config.config import Config
+from pathlib import Path
 from string import Template
+from utils.webdriver_factory import WebDriverFactory
+from utils.report_utils import ReportGenerator, TestCaseLogHandler
+from config.config import Config
+
+# Initialize report generator
+report_generator = ReportGenerator()
 
 def setup_logger():
-    """Configure root logger"""
+    """Configure minimal logging"""
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        force=True  # Force reconfiguration of the root logger
+        format='%(message)s',  # Simplified format
+        force=True
     )
+    
+    # Silence verbose loggers
+    logging.getLogger('WDM').setLevel(logging.ERROR)
+    logging.getLogger('selenium').setLevel(logging.ERROR)
+    logging.getLogger('urllib3').setLevel(logging.ERROR)
+    logging.getLogger('report').setLevel(logging.INFO)
 
 def create_screenshot_dirs():
     """Create screenshots directory structure"""
@@ -102,14 +112,43 @@ def pytest_runtest_makereport(item, call):
         # Initialize test data if not exists
         if item.nodeid not in pytest.test_data:
             pytest.test_data[item.nodeid] = {}
-            
-        # Update test metadata
+        
+        # Get error message if test failed
+        error_message = None
+        if call.excinfo:
+            if hasattr(call.excinfo.value, 'msg'):
+                error_message = str(call.excinfo.value.msg)
+            else:
+                error_message = str(call.excinfo.value)
+        
+        # Store test information
         pytest.test_data[item.nodeid].update({
             'name': item.name,
             'status': report.outcome,
             'duration': report.duration,
-            'error': str(call.excinfo.value) if call.excinfo else None
+            'error': error_message
         })
+        
+        # Get the logs from our custom handler
+        logs = pytest.test_data[item.nodeid].get('logs', '')
+        
+        # Use existing screenshot from driver fixture
+        screenshot_path = pytest.test_data[item.nodeid].get('screenshot')
+            
+        # Create test case HTML
+        html_content = report_generator.create_test_case_html(
+            name=item.name,
+            status=report.outcome,
+            duration=report.duration,
+            error=error_message,
+            screenshot_path=screenshot_path,
+            logs=logs
+        )
+        
+        # Store the HTML content
+        if not hasattr(item.session, 'test_results'):
+            item.session.test_results = []
+        item.session.test_results.append(html_content)
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     try:
@@ -121,25 +160,18 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         
         test_cases_html = []
         for nodeid, data in pytest.test_data.items():
-            name = data.get('name', 'Unknown Test')
-            status = data.get('status', 'error')
-            screenshot = data.get('screenshot')
-            logs = data.get('logs', '')
-            
-            logging.info(f"Processing test {name}:")
-            logging.info(f"Status: {status}")
-            logging.info(f"Screenshot: {screenshot}")
-            logging.info(f"Logs length: {len(logs)}")
-            
-            test_case_html = create_test_case_html(
-                name=name,
-                status=status,
-                duration=data.get('duration', 0),
+            test_case_html = report_generator.create_test_case_html(
+                name=data['name'],  # Use stored name
+                status=data['status'],  # Use stored status
+                duration=data['duration'],
                 error=data.get('error'),
-                screenshot_path=screenshot,
-                logs=logs
+                screenshot_path=data.get('screenshot'),
+                logs=data.get('logs', '')
             )
             test_cases_html.append(test_case_html)
+            
+            # Minimal logging
+            logging.debug(f"Processed test {data['name']}")
         
         # Prepare report data
         report_data = {

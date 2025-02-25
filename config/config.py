@@ -12,20 +12,19 @@ class Config:
         
         load_dotenv(env_path)
         
-        # Get and validate environment variables
+        # Get environment variables
         self.base_url = os.getenv('BASE_URL')
-        self.username = os.getenv('APP_USERNAME')  # Updated variable name
-        self.password = os.getenv('APP_PASSWORD')  # Updated variable name
-        
-        # Log configuration
-        self.logger.info(f"Base URL: {self.base_url}")
-        self.logger.info(f"Username: {self.username}")
-        self.logger.info("Password: ********")
+        self.username = os.getenv('APP_USERNAME')
+        self.password = os.getenv('APP_PASSWORD')
         
         # Validate required variables
-        if not all([self.base_url, self.username, self.password]):
-            missing = []
-            if not self.base_url: missing.append("BASE_URL")
-            if not self.username: missing.append("APP_USERNAME")
-            if not self.password: missing.append("APP_PASSWORD")
+        missing = []
+        if not self.base_url: missing.append("BASE_URL")
+        if not self.username: missing.append("APP_USERNAME")
+        if not self.password: missing.append("APP_PASSWORD")
+        
+        if missing:
             raise Exception(f"Missing required environment variables: {', '.join(missing)}")
+        
+        # Single log message for successful configuration
+        self.logger.info("Configuration loaded successfully")
