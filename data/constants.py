@@ -103,3 +103,36 @@ class CategoryPage:
         "UPDATED": "Category was successfully updated",
         "DELETED": "Category was successfully deleted"
     }
+
+class AddCategoryPage:
+    TITLE = "New Category"
+    PHOTO_DIMENSIONS = "Recommended Dimensions: W x H: 1440x x 285px and up"
+    URLS = {
+        "BACK": "/admin/categories"
+    }
+    BUTTONS = {
+        "SAVE": "Save",
+        "DISCARD": "Discard",
+        "BACK": "Back"
+    }
+    FIELDS = {
+        "NAME": "Name",
+        "DESCRIPTION": "Description",
+        "SORT_ORDER": "Sort Order",
+        "PHOTO": "Photo"
+    }
+    VALIDATION = {
+        "REQUIRED": "This field is required"
+    }
+    MESSAGES = {
+        "SUCCESS": "Category was successfully created",
+        "ERROR": "Please fix the errors below"
+    }
+    PHOTO = {
+        "ALLOWED_TYPES": [".jpg", ".jpeg", ".png"],
+        "MAX_SIZE": "2MB",
+        "DIMENSIONS": {
+            "WIDTH": 1440,
+            "HEIGHT": 285
+        }
+    }
