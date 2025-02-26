@@ -143,3 +143,30 @@ class AddCategoryPage:
             "HEIGHT": 285
         }
     }
+
+class EditCategoryPage:
+    TITLE = "Edit Category"
+    URLS = {
+        "BACK": "/admin/categories"
+    }
+    BUTTONS = {
+        "SAVE": "Save",
+        "DISCARD": "Discard",
+        "BACK": "Back"
+    }
+    VALIDATION = {
+        # Inherit all validation messages from AddCategoryPage
+        **AddCategoryPage.VALIDATION,
+        # Add or override edit-specific validation
+        "PHOTO_CHANGED": "Photo was successfully changed"
+    }
+    MESSAGES = {
+        "SUCCESS": "Category was successfully updated",
+        "ERROR": "Please fix the errors below"
+    }
+    PHOTO = {
+        # Inherit photo settings from AddCategoryPage
+        **AddCategoryPage.PHOTO,
+        # Add any edit-specific photo settings if needed
+        "CHANGE_TOOLTIP": "Change Photo"
+    }
