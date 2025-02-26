@@ -1,7 +1,7 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait  # Add this import
-import os  # Add this import
+from selenium.webdriver.support.ui import WebDriverWait
+import os
 from .base_page import BasePage
 
 class AddCategoryPage(BasePage):
@@ -11,57 +11,27 @@ class AddCategoryPage(BasePage):
     SAVE_BUTTON = (By.CSS_SELECTOR, "button.btn.btn--success[type='submit']")
     DISCARD_BUTTON = (By.CSS_SELECTOR, "a.btn.btn--outline-danger[href='/admin/categories']")
     
-    # Form Elements
-    PHOTO_UPLOAD = (By.CSS_SELECTOR, ".js-open-gallery")
-    PHOTO_PREVIEW = (By.ID, "photo-url-field-preview")
-    PHOTO_FIELD = (By.ID, "photo-url-field")
-    PHOTO_DIMENSIONS = (By.CSS_SELECTOR, ".text-info.overline")
-    
     # Form Fields
     ACTIVE_SWITCH = (By.ID, "category_active")
     NAME_INPUT = (By.ID, "category_name")
     DESCRIPTION_INPUT = (By.ID, "category_description")
     SORT_ORDER_INPUT = (By.ID, "category_sort_order")
+    PHOTO_DIMENSIONS = (By.CSS_SELECTOR, ".text-info.overline")
     
-    # Validation Elements
+    # Validation and Error Elements
     ERROR_CONTAINER = (By.ID, "formErrorStream")
-    FIELD_ERRORS = (By.CSS_SELECTOR, ".field-helper")
+    ERROR_ALERT = (By.CSS_SELECTOR, ".alert.alert--soft-danger")
+    ERROR_LIST = (By.CSS_SELECTOR, ".alert.alert--soft-danger .alert__content ul li")
+    FIELD_GROUP = (By.CLASS_NAME, "field-group")
+    FIELD_ERROR = (By.CLASS_NAME, "field-helper")
+    INVALID_FIELD_GROUP = (By.CLASS_NAME, "field-group--invalid")
 
-    # Gallery Modal Elements
-    GALLERY_WRAPPER = (By.ID, "gallery-wrapper")
-    GALLERY_MODAL = (By.CLASS_NAME, "gallery-wrapper--open")
-    GALLERY_UPLOAD_INPUT = (By.CSS_SELECTOR, "input.file_input[accept*='image'][type='file']")
-    GALLERY_ALLOWED_TYPES = "image/png, image/jpg, image/jpeg, image/gif"
-    GALLERY_UPLOAD_BUTTON = (By.CSS_SELECTOR, "#main_file_input_btn .btn--success")
-    GALLERY_PHOTOS = (By.CSS_SELECTOR, ".gallery-thumbnail.gallery-photo")
-    GALLERY_PHOTO_ITEM = (By.CLASS_NAME, "photo-item")
-    GALLERY_SELECT_BUTTON = (By.CSS_SELECTOR, "a.btn.btn--primary.btn--xs.insert-img")
-    GALLERY_CLOSE = (By.CLASS_NAME, "close-gallery")
-    UPLOAD_PROGRESS = (By.CLASS_NAME, "progress-bar-container")
-    UPLOAD_STATUS = (By.CSS_SELECTOR, ".bar-wrapper .percent")
-    PHOTO_PREVIEW_UPDATED = (By.CSS_SELECTOR, "#photo-url-field-preview:not([src*='placeholder'])")
-
-    # Clean gallery locators - keep only what we need
+    # Gallery Elements
     GALLERY_OPENER = (By.CSS_SELECTOR, ".js-open-gallery")
     GALLERY_MODAL = (By.ID, "gallery-wrapper")
-    FILE_INPUT = (By.CSS_SELECTOR, "#main_file_input")
+    GALLERY_PHOTO = (By.CSS_SELECTOR, ".gallery-thumbnail.gallery-photo")
+    ADD_PHOTO_BTN = (By.CSS_SELECTOR, "a.btn.btn--primary.insert-img[data-action='click->admin--gallery#insertPhoto']")
     PREVIEW_IMAGE = (By.ID, "photo-url-field-preview")
-    GALLERY_PREVIEW = (By.CSS_SELECTOR, ".gallery-photo-wrapper img")
-    ADD_PHOTO_BTN = (By.CSS_SELECTOR, "a.btn.btn--primary.insert-img:not(.hidden)")
-    UPLOAD_BUTTON = (By.CSS_SELECTOR, ".gallery-upload-btn .btn.btn--success")
-    PROGRESS_BAR = (By.CSS_SELECTOR, ".progress-bar-container")
-    PROGRESS_TEXT = (By.CSS_SELECTOR, ".bar-wrapper .percent")
-    NEW_PHOTO = (By.CSS_SELECTOR, ".photo-item:first-child .gallery-thumbnail")
-
-    # Simplified gallery locators
-    GALLERY_OPENER = (By.CSS_SELECTOR, ".js-open-gallery")
-    GALLERY_MODAL = (By.ID, "gallery-wrapper")
-    FILE_INPUT = (By.CSS_SELECTOR, "input.file_input[type='file']")  # Direct file input selector
-    PREVIEW_IMAGE = (By.ID, "photo-url-field-preview")
-    UPLOAD_STATUS = (By.CSS_SELECTOR, ".progress-bar-container .percent")
-    PHOTO_ITEM = (By.CSS_SELECTOR, ".photo-item")
-    ADD_PHOTO_BTN = (By.CSS_SELECTOR, "a.btn.btn--primary.btn--xs.insert-img[data-action='click->admin--gallery#insertPhoto']")
-    GALLERY_PHOTO = (By.CSS_SELECTOR, ".gallery-thumbnail.gallery-photo")  # First existing photo
 
     def clear_form(self):
         """Clear all form fields with explicit waits"""
@@ -154,13 +124,43 @@ class AddCategoryPage(BasePage):
             return False
 
     def get_field_error(self, field_id):
-        """Get error message for specific field"""
+        """Get inline error message for a specific field"""
         try:
+            # Find the field group containing the input
             field = self.find_element((By.ID, field_id))
-            error = field.find_element(By.XPATH, "../following-sibling::div[@class='field-helper']")
-            return error.text
-        except:
+            field_group = field.find_element(By.XPATH, "./ancestor::div[contains(@class, 'field-group')]")
+            
+            # Check if field group has invalid class
+            if "field-group--invalid" in field_group.get_attribute("class"):
+                error = field_group.find_element(*self.FIELD_ERROR)
+                return error.text if error.is_displayed() else None
+            
             return None
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get field error for {field_id}: {str(e)}")
+            return None
+
+    def get_all_field_errors(self):
+        """Get all inline field error messages"""
+        try:
+            errors = {}
+            invalid_groups = self.find_elements(self.INVALID_FIELD_GROUP)
+            
+            for group in invalid_groups:
+                try:
+                    label = group.find_element(By.CLASS_NAME, "label").text.strip()
+                    error = group.find_element(*self.FIELD_ERROR).text.strip()
+                    if error:
+                        errors[label] = error
+                except:
+                    continue
+                    
+            return errors
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get field errors: {str(e)}")
+            return {}
 
     def verify_page_loaded(self):
         """Verify page is loaded with all required elements"""
@@ -216,3 +216,13 @@ class AddCategoryPage(BasePage):
             self.logger.error(f"Photo selection failed: {str(e)}")
             self.logger.error(f"Current URL: {self.driver.current_url}")
             return False
+
+    def get_error_messages(self):
+        """Get list of error messages from notification"""
+        try:
+            self.wait.until(EC.presence_of_element_located(self.ERROR_ALERT))
+            errors = self.find_elements(self.ERROR_LIST)
+            return [error.text for error in errors]
+        except Exception as e:
+            self.logger.error(f"Failed to get error messages: {str(e)}")
+            return []

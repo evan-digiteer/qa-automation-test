@@ -116,15 +116,46 @@ class TestAddCategory:
             raise
 
     def test_required_fields_validation(self):
-        """Test required fields validation"""
-        # Try to save empty form
-        self.add_category_page.save_category()
-        
-        # Verify error messages
-        for field_id in ["category_name", "category_description", "category_sort_order"]:
-            error = self.add_category_page.get_field_error(field_id)
-            assert error == Constants.VALIDATION["REQUIRED"], \
-                f"Wrong or missing error message for {field_id}"
+        """Test form validation for required fields"""
+        try:
+            # Use the page's clear form method
+            self.add_category_page.clear_form()
+            
+            # Try to save empty form
+            self.add_category_page.save_category()
+            
+            # Check alert error messages
+            alert_errors = self.add_category_page.get_error_messages()
+            self.logger.info(f"Alert errors: {alert_errors}")
+            expected_alerts = [
+                Constants.VALIDATION["NAME_REQUIRED"],
+                Constants.VALIDATION["DESCRIPTION_REQUIRED"],
+                Constants.VALIDATION["PHOTO_REQUIRED"],
+                Constants.VALIDATION["SORT_ORDER_REQUIRED"],
+                Constants.VALIDATION["SORT_ORDER_INVALID"]  # Added invalid number message
+            ]
+            for error in expected_alerts:
+                assert error in alert_errors, f"Missing alert error: {error}"
+            
+            # Check inline field errors
+            field_errors = self.add_category_page.get_all_field_errors()
+            self.logger.info(f"Field errors: {field_errors}")
+            expected_fields = {
+                Constants.FIELDS["NAME"]: Constants.VALIDATION["REQUIRED"],
+                Constants.FIELDS["PHOTO"]: Constants.VALIDATION["REQUIRED"]  # Added photo field
+            }
+            assert field_errors == expected_fields, \
+                f"Field error mismatch. Expected: {expected_fields}, Got: {field_errors}"
+            
+            # Verify each field has error
+            for field_id in ["category_name", "category_description", "category_sort_order"]:
+                error = self.add_category_page.get_field_error(field_id)
+                assert error == Constants.VALIDATION["REQUIRED"], \
+                    f"Wrong error for {field_id}. Expected: '{Constants.VALIDATION['REQUIRED']}', Got: {error}"
+
+        except Exception as e:
+            self.logger.error(f"Test failed: {str(e)}")
+            raise
 
     def test_discard_changes(self):
         """Test discarding changes when creating category"""
@@ -145,4 +176,72 @@ class TestAddCategory:
         # Verify back on categories page
         assert "/admin/categories" in self.driver.current_url
 
-    # ...rest of existing tests...
+    def test_unique_constraints(self):
+        """Test unique constraints for name and sort order"""
+        try:
+            # First create a category
+            first_category = {
+                "name": f"Test Category {self.faker.company()}",
+                "description": self.faker.paragraph(),
+                "sort_order": self.faker.random_int(min=1, max=999),
+                "active": True
+            }
+            
+            self.logger.info(f"Creating first category: {first_category}")
+            
+            # Create first category
+            self.add_category_page.upload_photo()
+            self.add_category_page.fill_category_form(
+                name=first_category["name"],
+                description=first_category["description"],
+                sort_order=first_category["sort_order"],
+                active=first_category["active"]
+            )
+            self.add_category_page.save_category()
+            
+            # Navigate back to create new category
+            self.categories_page.click_new_category()
+            
+            # Try to create category with same name but different sort order
+            duplicate_name = {
+                "name": first_category["name"],  # Same name
+                "description": self.faker.paragraph(),
+                "sort_order": self.faker.random_int(min=1000, max=1999),  # Different sort order
+                "active": True
+            }
+            
+            self.logger.info(f"Attempting to create category with duplicate name: {duplicate_name}")
+            
+            self.add_category_page.upload_photo()
+            self.add_category_page.fill_category_form(**duplicate_name)
+            self.add_category_page.save_category()
+            
+            # Verify name error
+            alert_errors = self.add_category_page.get_error_messages()
+            assert any("already been taken" in error for error in alert_errors), \
+                f"Expected 'already been taken' error not found in: {alert_errors}"
+            
+            # Try with different name but same sort order
+            duplicate_sort = {
+                "name": f"Test Category {self.faker.company()}", # Different name
+                "description": self.faker.paragraph(),
+                "sort_order": first_category["sort_order"],  # Same sort order
+                "active": True
+            }
+            
+            self.logger.info(f"Attempting to create category with duplicate sort order: {duplicate_sort}")
+            
+            self.add_category_page.clear_form()
+            self.add_category_page.fill_category_form(**duplicate_sort)
+            self.add_category_page.save_category()
+            
+            # Verify sort order error
+            alert_errors = self.add_category_page.get_error_messages()
+            assert any("already been taken" in error for error in alert_errors), \
+                f"Expected 'already been taken' error not found in: {alert_errors}"
+            
+            self.logger.info("Unique constraints verified successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Test failed: {str(e)}")
+            raise
