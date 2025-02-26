@@ -48,8 +48,11 @@ class TestEditCategory:
             self.categories_page.search_category(self.test_category["name"])
             self.categories_page.edit_category(self.test_category["name"])
             
-            # Verify existing data
-            assert self.edit_page.verify_existing_data(self.test_category)
+            # Wait for page load before verification
+            assert self.edit_page.wait_for_page_load(), "Edit page failed to load"
+            
+            # First verify existing data
+            assert self.edit_page.verify_existing_data(self.test_category), "Data verification failed"
             
             # Update category data
             updated_data = {
@@ -59,17 +62,11 @@ class TestEditCategory:
                 "active": False
             }
             
-            # Ensure gallery is closed before proceeding
-            self.edit_page.close_gallery()
+            # Fill form with updated data
+            assert self.edit_page.fill_category_form(**updated_data), "Form fill failed"
             
-            # Change photo and update fields
-            self.edit_page.change_photo()
-            
-            # Ensure gallery is closed before form fill
-            self.edit_page.close_gallery()
-            
-            self.edit_page.fill_category_form(**updated_data)
-            self.edit_page.save_category()
+            # Save changes
+            assert self.edit_page.save_category(), "Save failed"
             
             # Verify updates in table
             self.categories_page.search_category(updated_data["name"])
