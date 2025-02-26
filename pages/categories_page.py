@@ -1,6 +1,7 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import WebDriverWait  # Add this import
 from .base_page import BasePage
 
 class CategoriesPage(BasePage):
@@ -49,7 +50,25 @@ class CategoriesPage(BasePage):
         True: (By.CSS_SELECTOR, "div[data-value='true'].option"),  # Active option
         False: (By.CSS_SELECTOR, "div[data-value='false'].option")  # Inactive option
     }
+
+    # Add Delete Modal Elements
+    DELETE_BUTTON = (By.CSS_SELECTOR, "a[data-action='click->admin--table#deleteItem']")
+    DELETE_MODAL = (By.ID, "modalDelete")
+    DELETE_MODAL_TITLE = (By.CLASS_NAME, "modal-title")
+    KEEP_RECORD_BUTTON = (By.CSS_SELECTOR, "button[data-bs-dismiss='modal']")
+    CONFIRM_DELETE_BUTTON = (By.ID, "jsDeleteItem")
+    MODAL_CLOSE_BUTTON = (By.CSS_SELECTOR, "button.modal-close")
     
+    # Update Delete Modal Elements with more precise locators
+    DELETE_MODAL = (By.ID, "modalDelete")
+    MODAL_DIALOG = (By.CSS_SELECTOR, "#modalDelete .modal-dialog")
+    DELETE_CONFIRM_TEXT = (By.CSS_SELECTOR, ".modal-body p")
+    KEEP_RECORD_BUTTON = (By.CSS_SELECTOR, "button.btn--primary[data-bs-dismiss='modal']")
+    CONFIRM_DELETE_BUTTON = (By.CSS_SELECTOR, "a.btn.btn--outline-danger[data-turbo-method='delete']")
+
+    # Add no records locator
+    NO_RECORDS = (By.CSS_SELECTOR, "td.text-danger.text-center[colspan='8']")
+
     def get_category_details(self, row):
         """Get details for a category row"""
         return {
@@ -67,11 +86,51 @@ class CategoriesPage(BasePage):
         return categories
 
     def search_category(self, name):
-        """Search for a category by name"""
-        self.type(self.SEARCH_INPUT, name)
-        # Wait for table to update
-        self.wait.until(EC.staleness_of(self.find_element(self.TABLE_ROWS)))
-        return self
+        """Search for a category by name with improved waits"""
+        try:
+            self.logger.info(f"Searching for category: {name}")
+            
+            # Wait for search input and clear it
+            search_input = self.wait.until(EC.presence_of_element_located(self.SEARCH_INPUT))
+            search_input.clear()
+            
+            # Type search term
+            search_input.send_keys(name)
+            
+            # Wait for search results with longer timeout
+            long_wait = WebDriverWait(self.driver, 20)
+            
+            # Wait for table update
+            old_rows = self.find_elements(self.TABLE_ROWS)
+            if old_rows:
+                # Wait for first row to become stale
+                long_wait.until(EC.staleness_of(old_rows[0]))
+            
+            # Wait for new rows and table to be visible
+            table = long_wait.until(EC.presence_of_element_located(self.TABLE))
+            long_wait.until(EC.visibility_of(table))
+            long_wait.until(EC.presence_of_element_located(self.TABLE_ROWS))
+            
+            # Additional wait for data to load
+            self.driver.implicitly_wait(2)
+            
+            # Verify search results
+            def verify_search_result():
+                rows = self.find_elements(self.TABLE_ROWS)
+                for row in rows:
+                    if row.find_element(*self.CATEGORY_NAME).text.strip() == name:
+                        return True
+                return False
+
+            # Wait up to 10 seconds for category to appear
+            long_wait.until(lambda d: verify_search_result())
+            self.logger.info(f"Category '{name}' found in search results")
+            
+            return self
+            
+        except Exception as e:
+            self.logger.error(f"Search failed: {str(e)}")
+            return self
 
     def sort_by(self, order):
         """Sort categories by given order using TomSelect dropdown"""
@@ -196,14 +255,119 @@ class CategoriesPage(BasePage):
                 return True
         return False
 
+    def wait_for_modal(self):
+        """Wait for modal to be visible and interactive"""
+        try:
+            # Wait for modal with longer timeout
+            long_wait = WebDriverWait(self.driver, 20)
+            
+            # Wait for both modal and dialog
+            modal = long_wait.until(EC.presence_of_element_located(self.DELETE_MODAL))
+            dialog = long_wait.until(EC.visibility_of_element_located(self.MODAL_DIALOG))
+            
+            # Wait for confirmation text
+            long_wait.until(EC.visibility_of_element_located(self.DELETE_CONFIRM_TEXT))
+            
+            # Additional wait for animation
+            self.driver.implicitly_wait(1)
+            
+            return True
+        except Exception as e:
+            self.logger.error(f"Modal not visible: {str(e)}")
+            return False
+
     def delete_category(self, name):
-        """Delete category by name"""
-        rows = self.find_elements(self.TABLE_ROWS)
-        for row in rows:
-            if row.find_element(*self.CATEGORY_NAME).text == name:
-                row.find_element(*self.DELETE_BUTTON).click()
-                return True
-        return False
+        """Delete a category by name with improved modal handling"""
+        try:
+            self.logger.info(f"Attempting to delete category: {name}")
+            
+            # Find and click delete button for category
+            found = False
+            rows = self.find_elements(self.TABLE_ROWS)
+            for row in rows:
+                if row.find_element(*self.CATEGORY_NAME).text.strip() == name:
+                    delete_btn = row.find_element(*self.DELETE_BUTTON)
+                    self.driver.execute_script("arguments[0].click();", delete_btn)
+                    found = True
+                    break
+            
+            if not found:
+                self.logger.error(f"Category '{name}' not found")
+                return False
+
+            # Wait for modal
+            if not self.wait_for_modal():
+                return False
+
+            # Click confirm delete
+            confirm_btn = self.wait.until(EC.element_to_be_clickable(self.CONFIRM_DELETE_BUTTON))
+            self.driver.execute_script("arguments[0].click();", confirm_btn)
+            
+            # Wait for modal to close
+            self.wait.until(EC.invisibility_of_element_located(self.DELETE_MODAL))
+            
+            # Verify deletion by refreshing
+            self.driver.refresh()
+            
+            # Check if category still exists
+            rows = self.find_elements(self.TABLE_ROWS)
+            for row in rows:
+                if row.find_element(*self.CATEGORY_NAME).text.strip() == name:
+                    self.logger.error(f"Category '{name}' still exists after deletion")
+                    return False
+            
+            self.logger.info(f"Category '{name}' successfully deleted")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to delete category: {str(e)}")
+            return False
+
+    def cancel_delete(self, name):
+        """Cancel category deletion with improved modal handling"""
+        try:
+            # Find and click delete button
+            found = False
+            rows = self.find_elements(self.TABLE_ROWS)
+            for row in rows:
+                if row.find_element(*self.CATEGORY_NAME).text.strip() == name:
+                    delete_btn = row.find_element(*self.DELETE_BUTTON)
+                    self.driver.execute_script("arguments[0].click();", delete_btn)
+                    found = True
+                    break
+                    
+            if not found:
+                self.logger.error(f"Category '{name}' not found")
+                return False
+
+            # Wait for modal
+            if not self.wait_for_modal():
+                return False
+            
+            # Click keep record
+            keep_btn = self.wait.until(EC.element_to_be_clickable(self.KEEP_RECORD_BUTTON))
+            self.driver.execute_script("arguments[0].click();", keep_btn)
+            
+            # Wait for modal to close
+            self.wait.until(EC.invisibility_of_element_located(self.DELETE_MODAL))
+            
+            # Verify category still exists
+            rows = self.find_elements(self.TABLE_ROWS)
+            still_exists = any(
+                row.find_element(*self.CATEGORY_NAME).text.strip() == name 
+                for row in rows
+            )
+            
+            if not still_exists:
+                self.logger.error("Category disappeared after cancellation")
+                return False
+                
+            self.logger.info(f"Successfully cancelled deletion of category '{name}'")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to cancel delete: {str(e)}")
+            return False
 
     def has_pagination(self):
         """Check if pagination is present and has multiple pages"""
@@ -247,3 +411,15 @@ class CategoriesPage(BasePage):
         except Exception as e:
             self.logger.error(f"Failed to navigate {direction}: {str(e)}")
             return None
+
+    def verify_no_records(self):
+        """Verify no records found after search"""
+        try:
+            long_wait = WebDriverWait(self.driver, 20)
+            return long_wait.until(lambda d: 
+                len(d.find_elements(*self.TABLE_ROWS)) == 0 or
+                d.find_elements(*self.NO_RECORDS)[0].text.strip() == "No record found"
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to verify no records: {str(e)}")
+            return False
