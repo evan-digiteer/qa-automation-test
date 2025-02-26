@@ -69,6 +69,9 @@ class CategoriesPage(BasePage):
     # Add no records locator
     NO_RECORDS = (By.CSS_SELECTOR, "td.text-danger.text-center[colspan='8']")
 
+    # Add error alert locator
+    ERROR_ALERT = (By.CSS_SELECTOR, ".alert.alert--danger .alert__content .col")
+
     def get_category_details(self, row):
         """Get details for a category row"""
         return {
@@ -277,7 +280,7 @@ class CategoriesPage(BasePage):
             return False
 
     def delete_category(self, name):
-        """Delete a category by name with improved modal handling"""
+        """Delete a category by name with error message check"""
         try:
             self.logger.info(f"Attempting to delete category: {name}")
             
@@ -303,19 +306,29 @@ class CategoriesPage(BasePage):
             confirm_btn = self.wait.until(EC.element_to_be_clickable(self.CONFIRM_DELETE_BUTTON))
             self.driver.execute_script("arguments[0].click();", confirm_btn)
             
-            # Wait for modal to close
+            # Check for error message immediately
+            try:
+                error_elem = WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located(self.ERROR_ALERT)
+                )
+                if error_elem.is_displayed() and error_elem.text:
+                    self.logger.info(f"Cannot delete '{name}' - {error_elem.text}")
+                    return False
+            except:
+                # No error found, continue with verification
+                pass
+
+            # Wait for modal to close and verify deletion
             self.wait.until(EC.invisibility_of_element_located(self.DELETE_MODAL))
             
-            # Verify deletion by refreshing
-            self.driver.refresh()
-            
-            # Check if category still exists
-            rows = self.find_elements(self.TABLE_ROWS)
-            for row in rows:
+            # Wait a moment and verify category is gone
+            self.driver.implicitly_wait(2)
+            remaining_rows = self.find_elements(self.TABLE_ROWS)
+            for row in remaining_rows:
                 if row.find_element(*self.CATEGORY_NAME).text.strip() == name:
                     self.logger.error(f"Category '{name}' still exists after deletion")
                     return False
-            
+                    
             self.logger.info(f"Category '{name}' successfully deleted")
             return True
             
