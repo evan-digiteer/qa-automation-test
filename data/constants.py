@@ -122,7 +122,14 @@ class AddCategoryPage:
         "PHOTO": "Photo"
     }
     VALIDATION = {
-        "REQUIRED": "This field is required"
+        "REQUIRED": "This field is required",
+        "NAME_REQUIRED": "Name can't be blank",
+        "DESCRIPTION_REQUIRED": "Description can't be blank",
+        "PHOTO_REQUIRED": "Photos can't be blank",
+        "SORT_ORDER_REQUIRED": "Sort order can't be blank", 
+        "SORT_ORDER_TAKEN": "Sort order has already been taken",  
+        "SORT_ORDER_INVALID": "Sort order is not a number",
+        "NAME_TAKEN": "Name has already been taken"
     }
     MESSAGES = {
         "SUCCESS": "Category was successfully created",
