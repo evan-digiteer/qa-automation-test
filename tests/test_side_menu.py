@@ -3,7 +3,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from pages.side_menu import SideMenu
 from pages.login_page import LoginPage
-from data.constants import URLs
+from data.constants import LoginPage as LoginConstants  # Update this import
+from data.constants import SideMenu as Constants  # Update this import
 
 class TestSideMenu:
     @pytest.fixture(autouse=True)
@@ -13,8 +14,8 @@ class TestSideMenu:
         self.driver = driver
         self.config = config
         
-        # Login first
-        login_url = self.config.base_url + URLs.LOGIN_PAGE
+        # Login first - Update to use LoginConstants
+        login_url = self.config.base_url + LoginConstants.URLS['LOGIN']
         self.driver.get(login_url)
         self.login_page.login(self.config.username, self.config.password)
 
@@ -22,27 +23,28 @@ class TestSideMenu:
         """Test that basic sidebar elements are present"""
         # Wait for page load
         self.driver.implicitly_wait(2)
-        # Test main menu visibility
+        # Test main menu visibility using constants
         menu_items = {
-            'Dashboard': self.side_menu.DASHBOARD_LINK,
-            'Content & Banner': self.side_menu.CONTENT_BANNER_LINK,
-            'Product': self.side_menu.PRODUCT_LINK,
-            'Users': self.side_menu.USERS_LINK
+            Constants.ITEMS['DASHBOARD']: self.side_menu.DASHBOARD_LINK,
+            Constants.ITEMS['CONTENT_BANNER']: self.side_menu.CONTENT_BANNER_LINK,
+            Constants.ITEMS['PRODUCT']: self.side_menu.PRODUCT_LINK,
+            Constants.ITEMS['USERS']: self.side_menu.USERS_LINK
         }
         
         for name, locator in menu_items.items():
-            assert self.side_menu.find_element(locator).is_displayed(), f"{name} link not visible"
+            assert self.side_menu.find_element(locator).is_displayed(), \
+                f"{name} link not visible"
 
     @pytest.mark.parametrize("section,expected_url", [
-        ('dashboard', '/admin/dashboard'),
-        ('content', '/admin/content-and-banner'),
-        ('product', '/admin/products'),
-        ('store_branches', '/admin/store-branches'),
-        ('announcements', '/admin/announcements'),
-        ('careers', '/admin/careers'),
-        ('roles', '/admin/roles'),
-        ('users', '/admin/users'),
-        ('logs', '/admin/audittrails')
+        ('dashboard', Constants.URLS['DASHBOARD']),
+        ('content', Constants.URLS['CONTENT_BANNER']),
+        ('product', Constants.URLS['PRODUCT']),
+        ('store_branches', Constants.URLS['STORE_BRANCHES']),
+        ('announcements', Constants.URLS['ANNOUNCEMENTS']),
+        ('careers', Constants.URLS['CAREERS']),
+        ('roles', Constants.URLS['ROLES']),
+        ('users', Constants.URLS['USERS']),
+        ('logs', Constants.URLS['LOGS'])
     ])
     def test_main_navigation_links(self, section, expected_url):
         """Test main navigation links in sidebar"""

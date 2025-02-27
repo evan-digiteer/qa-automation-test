@@ -2,33 +2,34 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from .base_page import BasePage
+from data.constants import SideMenu as Constants  # Add this import
 
 class SideMenu(BasePage):
-    # Update locators to use exact text matches
-    DASHBOARD_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="Dashboard"]/parent::a')
-    CONTENT_BANNER_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="Content & Banner"]/parent::a')
-    PRODUCT_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="Product"]/parent::a')
-    STORE_BRANCHES_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="Store Branches"]/parent::a')
-    ANNOUNCEMENTS_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="News & Announcements"]/parent::a')
-    CAREERS_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="Careers"]/parent::a')
-    ROLES_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="Roles"]/parent::a')
-    USERS_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="Users"]/parent::a')
-    LOGS_LINK = (By.XPATH, '//a[contains(@class, "sidebar__link")]//span[text()="Logs"]/parent::a')
+    # Update locators to use constants for text matching
+    DASHBOARD_LINK = (By.XPATH, f'//a[contains(@class, "sidebar__link")]//span[text()="{Constants.ITEMS["DASHBOARD"]}"]/parent::a')
+    CONTENT_BANNER_LINK = (By.XPATH, f'//a[contains(@class, "sidebar__link")]//span[text()="{Constants.ITEMS["CONTENT_BANNER"]}"]/parent::a')
+    PRODUCT_LINK = (By.XPATH, f'//a[contains(@class, "sidebar__link")]//span[text()="{Constants.ITEMS["PRODUCT"]}"]/parent::a')
+    STORE_BRANCHES_LINK = (By.XPATH, f'//a[contains(@class, "sidebar__link")]//span[text()="{Constants.ITEMS["STORE_BRANCHES"]}"]/parent::a')
+    ANNOUNCEMENTS_LINK = (By.XPATH, f'//a[contains(@class, "sidebar__link")]//span[text()="{Constants.ITEMS["ANNOUNCEMENTS"]}"]/parent::a')
+    CAREERS_LINK = (By.XPATH, f'//a[contains(@class, "sidebar__link")]//span[text()="{Constants.ITEMS["CAREERS"]}"]/parent::a')
+    ROLES_LINK = (By.XPATH, f'//a[contains(@class, "sidebar__link")]//span[text()="{Constants.ITEMS["ROLES"]}"]/parent::a')
+    USERS_LINK = (By.CSS_SELECTOR, f"a.sidebar__link[href='{Constants.URLS['USERS']}']")
+    LOGS_LINK = (By.XPATH, f'//a[contains(@class, "sidebar__link")]//span[text()="{Constants.ITEMS["LOGS"]}"]/parent::a')
     
-    # Collapsible buttons
-    SYSTEM_SETTINGS_BUTTON = (By.XPATH, '//button[@aria-controls="collapseSystemSettings"]//span[text()="System Settings"]/parent::button')
-    INQUIRIES_BUTTON = (By.XPATH, '//button[@aria-controls="collapseInquiries"]//span[text()="Inquiries"]/parent::button')
+    # Update collapsible section locators
+    SYSTEM_SETTINGS_BUTTON = (By.XPATH, f'//button[@aria-controls="collapseSystemSettings"]//span[text()="{Constants.SECTIONS["SYSTEM_SETTINGS"]}"]/parent::button')
+    INQUIRIES_BUTTON = (By.XPATH, f'//button[@aria-controls="collapseInquiries"]//span[text()="{Constants.SECTIONS["INQUIRIES"]}"]/parent::button')
     
     # Submenu sections - Used for checking expansion
     SYSTEM_SETTINGS_SECTION = (By.ID, 'collapseSystemSettings')
     INQUIRIES_SECTION = (By.ID, 'collapseInquiries')
     
-    # Submenu items - Updated with exact paths
-    CATEGORIES_LINK = (By.XPATH, '//div[@id="collapseSystemSettings"]//a[contains(@class, "sidebar__link--sub")]//span[text()="Categories"]/parent::a')
-    AREAS_LINK = (By.XPATH, '//div[@id="collapseSystemSettings"]//a[contains(@class, "sidebar__link--sub")]//span[text()="Areas"]/parent::a')
-    ANNOUNCEMENT_CATEGORIES_LINK = (By.XPATH, '//div[@id="collapseSystemSettings"]//a[contains(@class, "sidebar__link--sub")]//span[text()="News & Announcements Categories"]/parent::a')
-    MESSAGES_LINK = (By.XPATH, '//div[@id="collapseInquiries"]//a[contains(@class, "sidebar__link--sub")]//span[text()="Messages"]/parent::a')
-    FUNCTION_ROOM_LINK = (By.XPATH, '//div[@id="collapseInquiries"]//a[contains(@class, "sidebar__link--sub")]//span[text()="Function Room"]/parent::a')
+    # Update submenu item locators
+    CATEGORIES_LINK = (By.XPATH, f'//div[@id="collapseSystemSettings"]//a[contains(@class, "sidebar__link--sub")]//span[text()="{Constants.SYSTEM_SETTINGS_ITEMS["CATEGORIES"]}"]/parent::a')
+    AREAS_LINK = (By.XPATH, f'//div[@id="collapseSystemSettings"]//a[contains(@class, "sidebar__link--sub")]//span[text()="{Constants.SYSTEM_SETTINGS_ITEMS["AREAS"]}"]/parent::a')
+    ANNOUNCEMENT_CATEGORIES_LINK = (By.XPATH, f'//div[@id="collapseSystemSettings"]//a[contains(@class, "sidebar__link--sub")]//span[text()="{Constants.SYSTEM_SETTINGS_ITEMS["ANNOUNCEMENT_CATEGORIES"]}"]/parent::a')
+    MESSAGES_LINK = (By.XPATH, f'//div[@id="collapseInquiries"]//a[contains(@class, "sidebar__link--sub")]//span[text()="{Constants.INQUIRIES_ITEMS["MESSAGES"]}"]/parent::a')
+    FUNCTION_ROOM_LINK = (By.XPATH, f'//div[@id="collapseInquiries"]//a[contains(@class, "sidebar__link--sub")]//span[text()="{Constants.INQUIRIES_ITEMS["FUNCTION_ROOM"]}"]/parent::a')
     
     def wait_for_sidebar_load(self):
         """Wait for sidebar to be fully loaded"""
@@ -273,3 +274,31 @@ class SideMenu(BasePage):
         except Exception as e:
             self.logger.error(f"Failed to navigate to {item}: {str(e)}")
             return False
+
+    def navigate_to_users(self):
+        """Navigate to Users section"""
+        try:
+            self.logger.info("Navigating to Users section")
+            
+            # Wait for the element with longer timeout
+            long_wait = WebDriverWait(self.driver, 20)
+            users_link = long_wait.until(EC.element_to_be_clickable(self.USERS_LINK))
+            
+            # Click using JavaScript for reliability
+            self.driver.execute_script("arguments[0].click();", users_link)
+            
+            # Wait for URL change
+            self.wait.until(EC.url_contains('/admin/users'))
+            self.logger.info("Successfully navigated to Users section")
+            
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to navigate to Users section: {str(e)}")
+            return False
+
+    def navigate_to_users(self):
+        """Navigate to Users section"""
+        self.logger.info("Navigating to Users section")
+        self.wait.until(EC.element_to_be_clickable(self.USERS_LINK))
+        self.click(self.USERS_LINK)
+        return self
