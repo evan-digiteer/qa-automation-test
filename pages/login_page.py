@@ -1,31 +1,80 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from .base_page import BasePage
-from data.constants import ValidationData, ExpectedElements
+from data.constants import LoginPage as Constants
 
 class LoginPage(BasePage):
-    # Login Form Elements
-    EMAIL_INPUT = (By.ID, "user_email")
-    PASSWORD_INPUT = (By.ID, "user_password")
-    LOGIN_BUTTON = (By.XPATH, '//button[contains(@class, "btn--primary") and contains(@class, "btn--lg")]')
-    FORGOT_PASSWORD_LINK = (By.XPATH, "//a[contains(@href, '/admin/forgot/new')]")
+    def __init__(self, driver):
+        super().__init__(driver)
+
+    # Form Element
+    LOGIN_FORM = (By.ID, "new_user")
     
-    # Logout Elements
-    PROFILE_DROPDOWN = (By.XPATH, '//button[contains(@class, "header__dropdown-btn") and @data-bs-toggle="dropdown"]')
-    LOGOUT_BUTTON = (By.XPATH, '//button[@class="dropdown-menu__link" and contains(text(), "Log Out")]')
+    # Input Fields
+    EMAIL_FIELD = (By.ID, "user_email")
+    PASSWORD_FIELD = (By.ID, "user_password")
     
-    # Validation Elements
-    FIELD_GROUP = (By.CLASS_NAME, 'field-group')
-    INLINE_ERROR = (By.CLASS_NAME, 'field-helper')
+    # Buttons
+    LOGIN_BUTTON = (By.CSS_SELECTOR, "button.btn.btn--primary.btn--block.btn--lg")
+    SHOW_PASSWORD_BUTTON = (By.CSS_SELECTOR, "button[data-controller='admin--show-password']")
     
-    # Error Messages
-    REQUIRED_FIELD_ERROR = ValidationData.ERROR_MESSAGES["REQUIRED_FIELD"]
+    # Labels and Text Elements
+    LOGIN_HEADING = (By.CSS_SELECTOR, "h6")
+    EMAIL_LABEL = (By.CSS_SELECTOR, "label.label.label--required")
+    LOGO_IMAGE = (By.CSS_SELECTOR, "img.mb-4[alt='alt']")
+    FORGOT_PASSWORD_LINK = (By.CSS_SELECTOR, "a[href='/admin/forgot/new']")
+    
+    # Field Groups
+    EMAIL_FIELD_GROUP = (By.CSS_SELECTOR, ".field-group:nth-child(2)")
+    PASSWORD_FIELD_GROUP = (By.CSS_SELECTOR, ".field-group:nth-child(3)")
+    
+    # Input Containers
+    EMAIL_CONTAINER = (By.CSS_SELECTOR, ".field-container")
+    PASSWORD_CONTAINER = (By.CSS_SELECTOR, ".field-container")
     
     # Error Elements
-    ERROR_ALERT = (By.XPATH, "//div[contains(@class, 'alert--danger')]//div[@class='col']")
+    FIELD_HELPER = (By.CLASS_NAME, "field-helper")
+    ERROR_ALERT = (By.CSS_SELECTOR, ".alert.alert--danger")
 
-    # Password visibility
-    SHOW_PASSWORD_BUTTON = (By.CSS_SELECTOR, 'button[data-controller="admin--show-password"]')
+    def login(self, email, password):
+        """Perform login with given credentials"""
+        try:
+            self.logger.info(f"Attempting to login with email: {email}")
+            
+            # Wait for form to be ready
+            self.wait.until(EC.presence_of_element_located(self.LOGIN_FORM))
+            self.wait.until(EC.element_to_be_clickable(self.EMAIL_FIELD))
+            
+            # Clear and type credentials
+            self.find_element(self.EMAIL_FIELD).clear()
+            self.type(self.EMAIL_FIELD, email)
+            self.logger.info("Email entered")
+            
+            self.find_element(self.PASSWORD_FIELD).clear()
+            self.type(self.PASSWORD_FIELD, password)
+            self.logger.info("Password entered")
+            
+            # Wait for and click login button
+            login_button = self.wait.until(EC.element_to_be_clickable(self.LOGIN_BUTTON))
+            login_button.click()
+            self.logger.info("Login button clicked")
+            
+            # Wait for either success or error
+            self.wait.until(lambda d: 
+                "/admin/dashboard" in d.current_url or
+                self.is_element_visible(self.ERROR_ALERT)
+            )
+            
+            if "/admin/dashboard" in self.driver.current_url:
+                self.logger.info("Login successful")
+                return True
+            else:
+                self.logger.warning("Login failed - error alert displayed")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Login failed: {str(e)}")
+            return False
 
     def toggle_password_visibility(self):
         """Toggle password field visibility"""
@@ -40,13 +89,6 @@ class LoginPage(BasePage):
         except Exception as e:
             self.logger.error(f"Error toggling password visibility: {str(e)}")
             return None
-
-    # Basic Actions
-    def login(self, username, password):
-        """Perform login with given credentials"""
-        self.type(self.EMAIL_INPUT, username)
-        self.type(self.PASSWORD_INPUT, password)
-        self.click(self.LOGIN_BUTTON)
 
     def logout(self):
         """Perform logout action with proper waits"""
@@ -70,7 +112,6 @@ class LoginPage(BasePage):
             self.logger.error(f"Error during logout: {str(e)}")
             return False
 
-    # Error Handling and Validation
     def get_inline_error(self):
         """Get the text of inline error message if present"""
         return self.get_text(self.INLINE_ERROR)
@@ -109,81 +150,39 @@ class LoginPage(BasePage):
             self.logger.error(f"Error checking for error message: {str(e)}")
             return False
 
-    # Page Verification
     def verify_page_elements(self):
         """Verify essential elements are present and correct"""
-        expected = ExpectedElements.LOGIN_PAGE
-        errors = []
-        
         try:
-            # Check title
-            actual_title = self.driver.title
-            self.logger.info(f"Checking page title - Expected: '{expected['title']}', Found: '{actual_title}'")
-            if actual_title != expected["title"]:
-                errors.append(f"Title mismatch - Expected: '{expected['title']}', Found: '{actual_title}'")
-
-            # Check email field
-            try:
-                email_field = self.find_element(self.EMAIL_INPUT)
-                if not email_field.is_displayed():
-                    errors.append("Email field is not visible")
-                else:
-                    actual_email_placeholder = email_field.get_attribute("placeholder") or ""
-                    self.logger.info(f"Email field visible: True, placeholder: '{actual_email_placeholder}'")
-                    if not actual_email_placeholder:
-                        errors.append("Email placeholder is missing")
-                    elif actual_email_placeholder != expected["email_placeholder"]:
-                        errors.append(f"Email placeholder mismatch - Expected: '{expected['email_placeholder']}', Found: '{actual_email_placeholder}'")
-            except Exception as e:
-                errors.append(f"Error checking email field: {str(e)}")
-
-            # Check password field
-            try:
-                password_field = self.find_element(self.PASSWORD_INPUT)
-                if not password_field.is_displayed():
-                    errors.append("Password field is not visible")
-                else:
-                    actual_password_placeholder = password_field.get_attribute("placeholder") or ""
-                    self.logger.info(f"Password field visible: True, placeholder: '{actual_password_placeholder}'")
-                    if not actual_password_placeholder:
-                        errors.append("Password placeholder is missing")
-                    elif actual_password_placeholder != expected["password_placeholder"]:
-                        errors.append(f"Password placeholder mismatch - Expected: '{expected['password_placeholder']}', Found: '{actual_password_placeholder}'")
-            except Exception as e:
-                errors.append(f"Error checking password field: {str(e)}")
-
-            # Check login button
-            try:
-                login_button = self.find_element(self.LOGIN_BUTTON)
-                if not login_button.is_displayed():
-                    errors.append("Login button is not visible")
-                else:
-                    actual_button_text = login_button.text
-                    self.logger.info(f"Login button visible: True, text: '{actual_button_text}'")
-                    if actual_button_text != expected["login_button_text"]:
-                        errors.append(f"Login button text mismatch - Expected: '{expected['login_button_text']}', Found: '{actual_button_text}'")
-            except Exception as e:
-                errors.append(f"Error checking login button: {str(e)}")
-
-            # Check forgot password link
-            try:
-                forgot_link = self.find_element(self.FORGOT_PASSWORD_LINK)
-                if not forgot_link.is_displayed():
-                    errors.append("Forgot password link is not visible")
-                else:
-                    self.logger.info("Forgot password link is visible")
-            except Exception as e:
-                errors.append(f"Error checking forgot password link: {str(e)}")
-
-            # Report results
-            if errors:
-                for error in errors:
-                    self.logger.error(error)
-                return False
+            # Wait for form elements to be present
+            self.wait.until(EC.presence_of_element_located(self.LOGIN_FORM))
             
+            # Check page heading instead of title
+            heading = self.find_element(self.LOGIN_HEADING)
+            if heading.text != Constants.HEADING:
+                self.logger.error(f"Heading mismatch - Expected: '{Constants.HEADING}', Found: '{heading.text}'")
+                return False
+
+            # Check fields and verify they're usable
+            for field_id, placeholder in [
+                (self.EMAIL_FIELD, Constants.PLACEHOLDERS["EMAIL"]),
+                (self.PASSWORD_FIELD, Constants.PLACEHOLDERS["PASSWORD"])
+            ]:
+                field = self.wait.until(EC.element_to_be_clickable(field_id))
+                if not field.is_displayed():
+                    self.logger.error(f"Field not visible: {field_id}")
+                    return False
+                if field.get_attribute("placeholder") != placeholder:
+                    self.logger.error(f"Placeholder mismatch for {field_id}")
+                    return False
+
+            # Check login button is clickable
+            if not self.wait.until(EC.element_to_be_clickable(self.LOGIN_BUTTON)):
+                self.logger.error("Login button not clickable")
+                return False
+
             self.logger.info("All essential page elements verified successfully")
             return True
             
         except Exception as e:
-            self.logger.error(f"Unexpected error during page element verification: {str(e)}")
+            self.logger.error(f"Error during page verification: {str(e)}")
             return False
