@@ -1,30 +1,27 @@
 import os
-import logging
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv
 
 class Config:
     def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        # Load environment variables from .env file
+        load_dotenv()
         
-        env_path = find_dotenv()
-        if not env_path:
-            raise Exception(".env file not found")
+        # Base URL for the application
+        self.base_url = os.getenv('BASE_URL', 'http://localhost:3000')
         
-        load_dotenv(env_path)
+        # Login credentials - Use LOGIN_EMAIL instead of USERNAME
+        self.username = os.getenv('LOGIN_EMAIL')
+        self.password = os.getenv('LOGIN_PASSWORD')
         
-        # Get environment variables
-        self.base_url = os.getenv('BASE_URL')
-        self.username = os.getenv('APP_USERNAME')
-        self.password = os.getenv('APP_PASSWORD')
+        if not all([self.username, self.password]):
+            raise ValueError("Missing required environment variables LOGIN_EMAIL and LOGIN_PASSWORD")
         
-        # Validate required variables
-        missing = []
-        if not self.base_url: missing.append("BASE_URL")
-        if not self.username: missing.append("APP_USERNAME")
-        if not self.password: missing.append("APP_PASSWORD")
+        # Browser configuration
+        self.browser = os.getenv('BROWSER', 'chrome')
+        self.headless = os.getenv('HEADLESS', 'false').lower() == 'true'
         
-        if missing:
-            raise Exception(f"Missing required environment variables: {', '.join(missing)}")
+        # Timeouts
+        self.implicit_wait = int(os.getenv('IMPLICIT_WAIT', '10'))
+        self.explicit_wait = int(os.getenv('EXPLICIT_WAIT', '20'))
         
-        # Single log message for successful configuration
-        self.logger.info("Configuration loaded successfully")
+        print("Configuration loaded successfully")
