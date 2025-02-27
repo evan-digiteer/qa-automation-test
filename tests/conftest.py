@@ -54,9 +54,9 @@ def take_screenshot(driver, name):
         return None
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_session():
+def setup_session(request):
     setup_logger()
-    pytest.test_data = {}  # Single data store
+    request.config.test_data = {}  # Store on config instead of session
 
 @pytest.fixture(scope="session")
 def config():
@@ -72,11 +72,11 @@ def test_logging(request):
     yield
     
     # Initialize test data if not exists
-    if request.node.nodeid not in pytest.test_data:
-        pytest.test_data[request.node.nodeid] = {}
+    if request.node.nodeid not in request.config.test_data:
+        request.config.test_data[request.node.nodeid] = {}
     
     # Store logs
-    pytest.test_data[request.node.nodeid]['logs'] = log_handler.get_logs()
+    request.config.test_data[request.node.nodeid]['logs'] = log_handler.get_logs()
     logger.removeHandler(log_handler)
 
 @pytest.fixture(scope="function")
@@ -90,9 +90,9 @@ def driver(request):
     try:
         # Take screenshot at test end
         screenshot_path = take_screenshot(driver, request.node.name)
-        if request.node.nodeid not in pytest.test_data:
-            pytest.test_data[request.node.nodeid] = {}
-        pytest.test_data[request.node.nodeid]['screenshot'] = screenshot_path
+        if request.node.nodeid not in request.config.test_data:
+            request.config.test_data[request.node.nodeid] = {}
+        request.config.test_data[request.node.nodeid]['screenshot'] = screenshot_path
         
     except Exception as e:
         logging.error(f"Screenshot failed for {request.node.name}: {str(e)}")
@@ -110,8 +110,8 @@ def pytest_runtest_makereport(item, call):
     
     if report.when == "call":
         # Initialize test data if not exists
-        if item.nodeid not in pytest.test_data:
-            pytest.test_data[item.nodeid] = {}
+        if item.nodeid not in item.config.test_data:
+            item.config.test_data[item.nodeid] = {}
         
         # Get error message if test failed
         error_message = None
@@ -122,35 +122,15 @@ def pytest_runtest_makereport(item, call):
                 error_message = str(call.excinfo.value)
         
         # Store test information
-        pytest.test_data[item.nodeid].update({
+        item.config.test_data[item.nodeid].update({
             'name': item.name,
             'status': report.outcome,
             'duration': report.duration,
             'error': error_message
         })
-        
-        # Get the logs from our custom handler
-        logs = pytest.test_data[item.nodeid].get('logs', '')
-        
-        # Use existing screenshot from driver fixture
-        screenshot_path = pytest.test_data[item.nodeid].get('screenshot')
-            
-        # Create test case HTML
-        html_content = report_generator.create_test_case_html(
-            name=item.name,
-            status=report.outcome,
-            duration=report.duration,
-            error=error_message,
-            screenshot_path=screenshot_path,
-            logs=logs
-        )
-        
-        # Store the HTML content
-        if not hasattr(item.session, 'test_results'):
-            item.session.test_results = []
-        item.session.test_results.append(html_content)
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Handle test report generation"""
     try:
         logging.info("Generating HTML report")
         template_path = os.path.join(os.path.dirname(__file__), '..', 'templates', 'report_template.html')
@@ -159,27 +139,26 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
             template = Template(f.read())
         
         test_cases_html = []
-        for nodeid, data in pytest.test_data.items():
+        test_data = getattr(config, 'test_data', {})  # Get from config instead of terminalreporter
+        
+        for nodeid, data in test_data.items():
             test_case_html = report_generator.create_test_case_html(
-                name=data['name'],  # Use stored name
-                status=data['status'],  # Use stored status
-                duration=data['duration'],
+                name=data.get('name', nodeid),
+                status=data.get('status', 'unknown'),
+                duration=data.get('duration', 0),
                 error=data.get('error'),
                 screenshot_path=data.get('screenshot'),
                 logs=data.get('logs', '')
             )
             test_cases_html.append(test_case_html)
             
-            # Minimal logging
-            logging.debug(f"Processed test {data['name']}")
-        
         # Prepare report data
         report_data = {
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'passed': len([x for x in pytest.test_data.values() if x.get('status') == 'passed']),
-            'failed': len([x for x in pytest.test_data.values() if x.get('status') == 'failed']),
-            'skipped': len([x for x in pytest.test_data.values() if x.get('status') == 'skipped']),
-            'duration': f"{sum(x.get('duration', 0) for x in pytest.test_data.values()):.2f}s",
+            'passed': len([x for x in test_data.values() if x.get('status') == 'passed']),
+            'failed': len([x for x in test_data.values() if x.get('status') == 'failed']),
+            'skipped': len([x for x in test_data.values() if x.get('status') == 'skipped']),
+            'duration': f"{sum(x.get('duration', 0) for x in test_data.values()):.2f}s",
             'test_cases': '\n'.join(test_cases_html)
         }
         
