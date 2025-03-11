@@ -1,11 +1,12 @@
 from selenium.webdriver.common.by import By
-from .add_user_page import AddUserPage
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
-from data.constants import ValidationData
+from .add_user_page import AddUserPage
+from data.constants import EditUserPage as Constants
 
 class EditUserPage(AddUserPage):
-    # Additional Messages
-    SUCCESS_MESSAGE = ValidationData.USER_MESSAGES["USER_UPDATED"]
+    # Use constants instead of ValidationData
+    SUCCESS_MESSAGE = Constants.MESSAGES["UPDATED"]
     SUCCESS_ALERT = (By.CSS_SELECTOR, ".alert--soft-success")
 
     def get_current_data(self):

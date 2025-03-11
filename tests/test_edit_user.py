@@ -1,23 +1,29 @@
 import pytest
+import logging
 from pages.users_page import UsersPage
 from pages.edit_user_page import EditUserPage
 from pages.add_user_page import AddUserPage
 from pages.login_page import LoginPage
-from data.constants import ValidationData, URLs
+from pages.side_menu import SideMenu
+from data.constants import LoginPage as LoginConstants
+from data.constants import UsersPage as UserConstants
+from data.constants import EditUserPage as Constants
 from datetime import datetime
 
 class TestEditUser:
     @pytest.fixture(autouse=True)
     def setup(self, driver, config):
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.users_page = UsersPage(driver)
         self.edit_user_page = EditUserPage(driver)
         self.add_user_page = AddUserPage(driver)
         self.login_page = LoginPage(driver)
+        self.side_menu = SideMenu(driver)
         self.driver = driver
         self.config = config
         
-        # Login first
-        self.driver.get(self.config.base_url + URLs.LOGIN_PAGE)
+        # Login first using LoginConstants
+        self.driver.get(self.config.base_url + LoginConstants.URLS['LOGIN'])
         self.login_page.login(self.config.username, self.config.password)
         self.users_page.navigate_to_users()
 
@@ -25,14 +31,14 @@ class TestEditUser:
     def test_user(self):
         """Create a test user for editing"""
         # Navigate to add user page
-        self.users_page.click(self.users_page.ADD_USER_BUTTON)
+        self.users_page.click(self.users_page.NEW_USER_BUTTON)
         
         # Create test user with known data
         test_data = {
             'first_name': self.add_user_page.faker.first_name(),
             'last_name': self.add_user_page.faker.last_name(),
             'email': self.add_user_page.faker.email(),
-            'role': ValidationData.USER_ROLES[0],
+            'role': Constants.ROLES['ADMIN'],  # Use Constants instead of ValidationData
             'is_active': True
         }
         
@@ -61,7 +67,7 @@ class TestEditUser:
         self.edit_user_page.update_user(updated_data)
         
         # Verify success message and updated user exists
-        assert self.users_page.verify_success_message(ValidationData.USER_MESSAGES["USER_UPDATED"]), \
+        assert self.users_page.verify_success_message(Constants.MESSAGES['UPDATED']), \
             "Success message not shown after redirect"
         
         # Get user row and verify update
@@ -84,4 +90,14 @@ class TestEditUser:
         
         assert self.edit_user_page.is_error_message_displayed(), \
             "Required field validation messages not displayed"
+
+    def verify_field_updates(self, updated_data):
+        """Verify field updates are reflected correctly"""
+        # Verify fields using constants
+        assert self.edit_user_page.get_text(self.edit_user_page.FIRST_NAME_INPUT) == updated_data['first_name'], \
+            "First name not updated"
+        assert self.edit_user_page.get_text(self.edit_user_page.LAST_NAME_INPUT) == updated_data['last_name'], \
+            "Last name not updated"
+        assert self.edit_user_page.verify_success_message(Constants.MESSAGES["UPDATED"]), \
+            "Success message not displayed"
 

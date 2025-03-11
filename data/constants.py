@@ -302,3 +302,40 @@ class AddUserPage:
         "DUPLICATE_EMAIL": "Email has already been taken",
         "PASSWORD_TOO_SHORT": "Password is too short (minimum is 6 characters)"
     }
+
+class EditUserPage(AddUserPage):
+    """Constants for Edit User page"""
+    TITLE = "Edit User"
+    
+    # Add edit-specific messages
+    MESSAGES = {
+        "UPDATED": "User was successfully updated",
+        "PHOTO_CHANGED": "Photo was successfully changed"
+    }
+    
+    # Add edit-specific validation messages
+    VALIDATION = {
+        **AddUserPage.VALIDATION,  # Inherit validation from AddUserPage
+        "CURRENT_PASSWORD_REQUIRED": "Current password can't be blank",
+        "CURRENT_PASSWORD_INVALID": "Current password is invalid"
+    }
+    
+    # Add edit-specific fields
+    FIELDS = {
+        **AddUserPage.FIELDS,  # Inherit fields from AddUserPage
+        "CURRENT_PASSWORD": {
+            "LABEL": "Current Password",
+            "PLACEHOLDER": "Enter Current Password"
+        },
+        "NEW_PASSWORD": {
+            "LABEL": "New Password",
+            "PLACEHOLDER": "Enter New Password"
+        }
+    }
+
+    # URLs for edit page
+    URLS = {
+        "EDIT": "/admin/users/{id}/edit",
+        "UPDATE": "/admin/users/{id}",
+        "BACK": "/admin/users"
+    }
