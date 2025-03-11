@@ -56,7 +56,7 @@ class TestCategories:
                 f"Found category '{category['name']}' does not contain search term '{test_category}'"
 
     def test_sort_by_order(self):
-        """Test sorting functionality for sort order only"""
+        """Test sorting functionality"""
         def verify_sort_order(categories, descending=False):
             orders = [int(cat['sort_order']) for cat in categories]
             self.logger.info(f"Current sort order: {orders}")
@@ -72,7 +72,7 @@ class TestCategories:
 
         # Test descending order
         self.logger.info("Testing sort order descending")
-        self.categories_page.sort_by(CategoryPage.SORT_OPTIONS["ORDER_DESC"])
+        self.categories_page.sort_by_column(CategoryPage.TableColumns.SORT_ORDER)
         self.driver.implicitly_wait(1)
         verify_sort_order(self.categories_page.get_all_categories(), descending=True)
 
@@ -83,7 +83,7 @@ class TestCategories:
         verify_sort_order(self.categories_page.get_all_categories(), descending=False)
 
     def test_sort_by_name(self):
-        """Test sorting functionality for category names"""
+        """Test sorting by name"""
         def verify_name_sequence(names, descending=False):
             """Verify names are in roughly correct sequence (A-Z or Z-A)"""
             self.logger.info(f"Checking name order: {names}")
@@ -102,7 +102,7 @@ class TestCategories:
 
         # Test A-Z name sorting
         self.logger.info("Testing Category Name A-Z")
-        self.categories_page.sort_by(CategoryPage.SORT_OPTIONS["NAME_ASC"])
+        self.categories_page.sort_by_column(CategoryPage.TableColumns.NAME)
         self.driver.implicitly_wait(1)
         categories = self.categories_page.get_all_categories()
         names_asc = [cat['name'] for cat in categories]

@@ -3,6 +3,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait  # Add this import
 from .base_page import BasePage
+from data.constants import CategoryPage
 
 class CategoriesPage(BasePage):
     # Page Header Elements
@@ -21,9 +22,16 @@ class CategoriesPage(BasePage):
     TABLE_ROWS = (By.CSS_SELECTOR, "tbody tr")
     
     # Table Column Elements
-    CATEGORY_NAME = (By.CSS_SELECTOR, "td:nth-child(1)")
-    SORT_ORDER = (By.CSS_SELECTOR, "td:nth-child(2)")
-    STATUS = (By.CSS_SELECTOR, "td:nth-child(3) .badge")
+    CATEGORY_NAME = (By.CSS_SELECTOR, f"td:nth-child({CategoryPage.TableColumns.NAME})")
+    SORT_ORDER = (By.CSS_SELECTOR, f"td:nth-child({CategoryPage.TableColumns.SORT_ORDER})")
+    STATUS = (By.CSS_SELECTOR, f"td:nth-child({CategoryPage.TableColumns.STATUS}) .badge")
+    ACTIONS = (By.CSS_SELECTOR, f"td:nth-child({CategoryPage.TableColumns.ACTION})")
+
+    # Update column headers
+    NAME_HEADER = (By.XPATH, f"//button[@data-button-type='{CategoryPage.TableColumns.NAME}']")
+    SORT_ORDER_HEADER = (By.XPATH, f"//button[@data-button-type='{CategoryPage.TableColumns.SORT_ORDER}']")
+    STATUS_HEADER = (By.XPATH, f"//button[@data-button-type='{CategoryPage.TableColumns.STATUS}']")
+
     EDIT_BUTTON = (By.CSS_SELECTOR, "a[data-bs-title='Edit']")
     DELETE_BUTTON = (By.CSS_SELECTOR, "a[data-bs-title='Delete']")
     
