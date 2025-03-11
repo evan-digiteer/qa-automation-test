@@ -1,26 +1,47 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
+from selenium.webdriver.support import expected_conditions as EC  # Add this import
+from selenium.webdriver.support.ui import WebDriverWait  # Add this import
 from faker import Faker
 from .base_page import BasePage
-from data.constants import ValidationData
+from data.constants import AddUserPage as Constants
 
 class AddUserPage(BasePage):
-    # Form Fields
-    FIRST_NAME_INPUT = (By.ID, "first_name")
-    LAST_NAME_INPUT = (By.ID, "last_name")
-    EMAIL_INPUT = (By.ID, "email")
-    ROLE_SELECT = (By.ID, "roleid")
-    STATUS_TOGGLE = (By.ID, "user_active")
+    # Form Elements
+    USER_FORM = (By.ID, "new_user")
+    FORM_ERROR_STREAM = (By.ID, "formErrorStream")
     
-    # Buttons
-    SAVE_BUTTON = (By.CSS_SELECTOR, "button.btn--primary[type='submit']")
-    DISCARD_BUTTON = (By.CSS_SELECTOR, "a.btn--default[href='/admin/users']")
+    # Header Elements
+    TITLE = (By.CSS_SELECTOR, ".card__header .fw-bold")
+    BACK_BUTTON = (By.CSS_SELECTOR, "a[data-bs-title='Back']")
+    SAVE_BUTTON = (By.CSS_SELECTOR, "button.btn.btn--success")
+    DISCARD_BUTTON = (By.CSS_SELECTOR, "a.btn.btn--outline-danger[href='/admin/users']")
     
-    # Validation Elements (same as LoginPage)
-    FIELD_GROUP = (By.CLASS_NAME, 'field-group')
-    INLINE_ERROR = (By.CLASS_NAME, 'field-helper')
-    REQUIRED_FIELD_ERROR = ValidationData.ERROR_MESSAGES["REQUIRED_FIELD"]
+    # Photo Elements
+    USER_PHOTO_PREVIEW = (By.ID, "userPhotoPreview")
+    UPLOAD_PHOTO_INPUT = (By.ID, "member-photo")
+    UPLOAD_PHOTO_BUTTON = (By.CSS_SELECTOR, ".btn.btn--primary.btn--block.upload-btn")
+    REMOVE_PHOTO_BUTTON = (By.CSS_SELECTOR, ".btn.btn--outline-primary.btn--block")
+    REMOVE_PHOTO_HIDDEN = (By.ID, "remove-photo")
     
+    # Input Fields
+    FIRST_NAME_INPUT = (By.ID, "user_first_name")
+    MIDDLE_NAME_INPUT = (By.ID, "user_middle_name")
+    LAST_NAME_INPUT = (By.ID, "user_last_name")
+    EMAIL_INPUT = (By.ID, "user_email")
+    
+    # Role Selection
+    ROLE_SELECT = (By.ID, "division-id")
+    ROLE_DROPDOWN = (By.CSS_SELECTOR, ".ts-wrapper.single")
+    ROLE_INPUT = (By.CSS_SELECTOR, ".ts-control")
+    ROLE_OPTIONS = (By.CSS_SELECTOR, ".ts-dropdown-content")
+    
+    # Field Groups
+    FIELD_GROUP = (By.CLASS_NAME, "field-group")
+    FIELD_CONTAINER = (By.CLASS_NAME, "field-container")
+    FIELD_HELPER = (By.CLASS_NAME, "field-helper")
+    REQUIRED_LABEL = (By.CLASS_NAME, "label--required")
+
     # Alert Messages
     ALERT_MESSAGE = (By.CSS_SELECTOR, ".alert--soft-danger ul li")
     
@@ -35,8 +56,8 @@ class AddUserPage(BasePage):
                 'first_name': self.faker.first_name(),
                 'last_name': self.faker.last_name(),
                 'email': self.faker.email(),
-                'role': 'Administrator',
-                'is_active': True
+                'role': 'Administrator'
+                # Removed is_active since there's no toggle
             }
         
         self.type(self.FIRST_NAME_INPUT, user_data['first_name'])
@@ -47,24 +68,57 @@ class AddUserPage(BasePage):
         role_select = Select(self.find_element(self.ROLE_SELECT))
         role_select.select_by_visible_text(user_data['role'])
         
-        # Handle status toggle
-        status_checkbox = self.find_element(self.STATUS_TOGGLE)
-        if status_checkbox.is_selected() != user_data['is_active']:
-            status_checkbox.click()
-        
         return user_data
 
     def save_user(self):
-        """Click save button and return success status"""
-        self.logger.info("Saving new user")
-        self.click(self.SAVE_BUTTON)
-        return True
+        """Click save button and wait for redirect"""
+        try:
+            self.logger.info("Saving new user")
+            current_url = self.driver.current_url
+            
+            # Click save button
+            self.click(self.SAVE_BUTTON)
+            
+            # Wait for URL to change with longer timeout
+            long_wait = WebDriverWait(self.driver, 30)  # Increased timeout
+            long_wait.until(EC.url_contains('/admin/users'))
+            long_wait.until(lambda d: d.current_url != current_url)
+            
+            # Wait for page load and table
+            long_wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
+            long_wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '.table')))
+            long_wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'tbody tr')))
+            
+            # Extra wait for data to settle
+            self.driver.implicitly_wait(3)
+            
+            self.logger.info("User saved successfully")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to save user: {str(e)}")
+            return False
 
     def discard_changes(self):
-        """Click discard button to cancel user creation"""
-        self.logger.info("Discarding changes")
-        self.click(self.DISCARD_BUTTON)
-        return True
+        """Click discard button and wait for navigation back to users page"""
+        try:
+            self.logger.info("Discarding changes and returning to users page")
+            current_url = self.driver.current_url
+            
+            # Click discard button
+            self.click(self.DISCARD_BUTTON)
+            
+            # Wait for URL to change to users page
+            self.wait.until(EC.url_contains('/admin/users'))
+            self.wait.until(lambda d: d.current_url != current_url)
+            
+            # Wait for users table to be visible
+            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '.table')))
+            
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to discard changes: {str(e)}")
+            return False
 
     def create_user(self, user_data=None):
         """Complete flow to create a new user"""

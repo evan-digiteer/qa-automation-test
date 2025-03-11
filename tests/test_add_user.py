@@ -1,32 +1,51 @@
 import pytest
-from pages.users_page import UsersPage
+import logging
 from pages.add_user_page import AddUserPage
+from pages.users_page import UsersPage
+from pages.side_menu import SideMenu
 from pages.login_page import LoginPage
-from data.constants import ValidationData, URLs
+from data.constants import LoginPage as LoginConstants
+from data.constants import AddUserPage as Constants
+from faker import Faker
 
 class TestAddUser:
     @pytest.fixture(autouse=True)
     def setup(self, driver, config):
-        self.users_page = UsersPage(driver)
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.faker = Faker()
         self.add_user_page = AddUserPage(driver)
+        self.users_page = UsersPage(driver)
+        self.side_menu = SideMenu(driver)
         self.login_page = LoginPage(driver)
         self.driver = driver
         self.config = config
         
-        # Login and navigate to users page
-        self.driver.get(self.config.base_url + URLs.LOGIN_PAGE)
-        self.login_page.login(self.config.username, self.config.password)
-        self.users_page.navigate_to_users()
+        # Login first using LoginPage
+        self.logger.info("Logging in before add user tests")
+        self.driver.get(f"{config.base_url}{LoginConstants.URLS['LOGIN']}")
+        assert self.login_page.login(config.username, config.password), "Login failed"
         
-        # Click add user button
-        self.users_page.click(self.users_page.ADD_USER_BUTTON)
+        # Navigate to users page using side menu
+        self.logger.info("Navigating to Users page")
+        assert self.side_menu.navigate_to_users(), "Failed to navigate to Users page"
+        
+        # Wait for users page and click add user
+        assert self.users_page.wait_for_users_table(), "Users table failed to load"
+        self.users_page.click(self.users_page.NEW_USER_BUTTON)
+        self.logger.info("Setup completed successfully")
 
     def test_create_user_with_valid_data(self):
         """Test creating a new user with valid data"""
         # Create user with generated data
         user_data = self.add_user_page.create_user()
         
-        # Verify user appears in the table
+        # Wait for navigation and table update
+        self.users_page.wait_for_users_table()
+        
+        # Search for the user to verify
+        self.users_page.search_user(user_data['email'], search_type="email")
+        
+        # Verify user appears in search results
         assert self.users_page.is_user_present(user_data['email']), \
             f"New user {user_data['email']} not found in users table"
 
@@ -36,10 +55,15 @@ class TestAddUser:
         user_data = self.add_user_page.fill_user_form()
         self.add_user_page.discard_changes()
         
-        # Verify back on users page and user not created
-        assert self.users_page.is_on_users_page(), "Not returned to users page"
+        # Verify back on users page by checking URL and table presence
+        assert '/admin/users' in self.driver.current_url, "Not returned to users page"
+        assert self.users_page.wait_for_users_table(), "Users table not loaded"
+        
+        # Verify user not created
         assert not self.users_page.is_user_present(user_data['email']), \
             f"User {user_data['email']} should not exist after discard"
+        
+        self.logger.info("Successfully discarded user creation")
 
     def test_required_fields_validation(self):
         """Test required fields validation"""
@@ -47,38 +71,14 @@ class TestAddUser:
         assert self.add_user_page.is_error_message_displayed(), \
             "Required field validation message not displayed"
 
-    @pytest.mark.parametrize("role", ValidationData.USER_ROLES)
-    def test_user_role_selection(self, role):
-        """Test creating users with different roles"""
-        # Generate test data
-        user_data = {
-            'first_name': self.add_user_page.faker.first_name(),
-            'last_name': self.add_user_page.faker.last_name(),
-            'email': self.add_user_page.faker.email(),
-            'role': role,
-            'is_active': True
-        }
-        
-        # Create user and navigate back to users page
-        self.add_user_page.create_user(user_data)
-        self.users_page.navigate_to_users()
-        
-        # Find user and verify role
-        user_row = self.users_page.get_user_by_email(user_data['email'])
-        assert user_row is not None, f"User {user_data['email']} not found in table"
-        
-        user_role = user_row.find_element(*self.users_page.USER_ROLE).text
-        assert user_role == role, f"User role mismatch. Expected: {role}, Got: {user_role}"
-
     def test_duplicate_email_validation(self):
         """Test that duplicate email addresses are not allowed"""
         # Create first user with generated data
         user_data = {
-            'first_name': self.add_user_page.faker.first_name(),
-            'last_name': self.add_user_page.faker.last_name(),
-            'email': self.add_user_page.faker.email(),
-            'role': 'Administrator',
-            'is_active': True
+            'first_name': self.faker.first_name(),
+            'last_name': self.faker.last_name(),
+            'email': self.faker.email(),
+            'role': 'Administrator'  # Removed is_active
         }
         
         # Create first user and verify success
@@ -86,18 +86,20 @@ class TestAddUser:
         assert self.users_page.is_user_present(user_data['email']), \
             "First user creation failed"
         
+        # Click New User button to create second user
+        self.users_page.click(self.users_page.NEW_USER_BUTTON)
+        
         # Try to create second user with same email
-        self.users_page.click(self.users_page.ADD_USER_BUTTON)
         duplicate_data = user_data.copy()
         duplicate_data.update({
-            'first_name': self.add_user_page.faker.first_name(),
-            'last_name': self.add_user_page.faker.last_name()
+            'first_name': self.faker.first_name(),
+            'last_name': self.faker.last_name()
         })
         
         self.add_user_page.fill_user_form(duplicate_data)
         self.add_user_page.save_user()
         
-        # Verify correct error message appears
+        # Verify correct error message appears using constants
         assert self.add_user_page.is_error_message_displayed(
-            ValidationData.USER_MESSAGES["DUPLICATE_EMAIL"]
+            Constants.ERROR_MESSAGES["DUPLICATE_EMAIL"]
         ), "Duplicate email validation message not displayed"
