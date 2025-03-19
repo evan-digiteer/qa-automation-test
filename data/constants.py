@@ -339,3 +339,97 @@ class EditUserPage(AddUserPage):
         "UPDATE": "/admin/users/{id}",
         "BACK": "/admin/users"
     }
+
+class AnnouncementsPage:
+    TITLE = "Announcements"
+    TABLE_HEADERS = ["Headline", "Status", "Action"]
+
+    SORT_OPTIONS = {
+        "HEADLINE_ASC": "headline asc",
+        "HEADLINE_DESC": "headline desc"
+    }
+
+    STATUS = {
+        "ACTIVE": "Active",
+        "INACTIVE": "Inactive"
+    }
+
+    URLS = {
+        "LIST": "/admin/announcements",
+        "NEW": "/admin/announcements/new",
+        "EDIT": "/admin/announcements/{id}/edit"
+    }
+
+    MESSAGES = {
+        "CREATED": "Announcement was successfully created",
+        "UPDATED": "Announcement was successfully updated",
+        "DELETED": "Announcement was successfully deleted"
+    }
+
+    class TableColumns:
+        HEADLINE = "1"
+        STATUS = "2"
+        ACTION = "3"
+
+
+class AddAnnouncementPage:
+    TITLE = "New Announcement"
+    PHOTO_DIMENSIONS = "Recommended Dimensions: W x H: 450px x 450px"
+
+    FIELDS = {
+        "CATEGORY": {
+            "LABEL": "Announcement Category",
+            "PLACEHOLDER": "Select Announcement Category"
+        },
+        "HEADLINE": {
+            "LABEL": "Headline",
+            "PLACEHOLDER": "Enter Headline"
+        },
+        "DESCRIPTION": {
+            "LABEL": "Short Description",
+            "PLACEHOLDER": "Enter Short Description"
+        },
+        "AUTHOR": {
+            "LABEL": "Author/Created By",
+            "PLACEHOLDER": "Enter Author/Created By"
+        },
+        "DATE": {
+            "LABEL": "Published Date",
+            "PLACEHOLDER": "Select Published date"
+        },
+        "CONTENT": {
+            "LABEL": "Content",
+            "PLACEHOLDER": "Start writing..."
+        },
+        "PHOTO": {
+            "LABEL": "Photo",
+            "PLACEHOLDER": "Upload a photo"
+        }
+    }
+
+    VALIDATION = {
+        "HEADLINE_REQUIRED": "Headline can't be blank",
+        "DESCRIPTION_REQUIRED": "Description can't be blank",
+        "AUTHOR_REQUIRED": "Author can't be blank",
+        "DATE_REQUIRED": "Published date can't be blank",
+        "CONTENT_REQUIRED": "Content can't be blank",
+        "PHOTO_REQUIRED": "Photo can't be blank"
+    }
+
+    INLINE_VALIDATION = {
+        "HEADLINE_REQUIRED": "This field is required",
+        "DESCRIPTION_REQUIRED": "This field is required",
+        "AUTHOR_REQUIRED": "This field is required",
+        "DATE_REQUIRED": "This field is required",
+        "CONTENT_REQUIRED": "This field is required",
+        "PHOTO_REQUIRED": "This field is required"
+    }
+
+    PHOTO = {
+        "ALLOWED_TYPES": [".jpg", ".jpeg", ".png"],
+        "MAX_SIZE": "2MB",
+        "DIMENSIONS": {
+            "WIDTH": 450,
+            "HEIGHT": 450
+        }
+    }
