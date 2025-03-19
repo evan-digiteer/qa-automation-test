@@ -213,7 +213,7 @@ class SideMenu(BasePage):
             item_mapping = {
                 'categories': (self.CATEGORIES_LINK, '/admin/categories'),
                 'areas': (self.AREAS_LINK, '/admin/areas'),
-                'announcement_categories': (self.ANNOUNCEMENT_CATEGORIES_LINK, '/admin/announcement-categories')
+                'announcement_categories': (self.ANNOUNCEMENT_CATEGORIES_LINK, '/admin/announcement-categories'),
             }
             
             if item not in item_mapping:

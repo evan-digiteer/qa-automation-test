@@ -339,3 +339,75 @@ class EditUserPage(AddUserPage):
         "UPDATE": "/admin/users/{id}",
         "BACK": "/admin/users"
     }
+
+class CareersPage:
+    TITLE = "Careers"
+    TABLE_HEADERS = ["Job Title", "Status", "Action"]
+    
+    STATUS = {
+        "ACTIVE": "Active",
+        "INACTIVE": "Inactive"
+    }
+    
+    URLS = {
+        "LIST": "/admin/careers",
+        "NEW": "/admin/careers/new",
+        "EDIT": "/admin/careers/{id}/edit"
+    }
+    
+    MESSAGES = {
+        "CREATED": "Career was successfully created",
+        "UPDATED": "Career was successfully updated",
+        "DELETED": "Career was successfully deleted"
+    }
+    
+    class TableColumns:
+        JOB_TITLE = "1"
+        STATUS = "2"
+        ACTION = "3"
+
+class AddCareerPage:
+    TITLE = "New Career"
+
+   # Form field labels and placeholders
+    FIELDS = {
+        "JOB_TITLE": {
+            "LABEL": "Job Title",
+            "PLACEHOLDER": "Enter Job Title"
+        },
+        "DEPARTMENT": {
+            "LABEL": "Department",
+            "PLACEHOLDER": "Enter Department"
+        },
+        "APPLY_LINK": {
+            "LABEL": "Apply Link",
+            "PLACEHOLDER": "Enter Apply Link"
+        },
+        "AREA": {
+            "LABEL": "Area",
+            "PLACEHOLDER": "Select Area"
+        },
+        "STORE_BRANCH": {
+            "LABEL": "Store Branch",
+            "PLACEHOLDER": "Select Store Branch"
+        },
+        "JOB_DESCRIPTION": {
+            "LABEL": "Job Description",
+            "PLACEHOLDER": "Start writing..."
+        },
+        "RESPONSIBILITIES": {
+            "LABEL": "Responsibilities",
+            "PLACEHOLDER": "Start writing..."
+        },
+        "QUALIFICATIONS": {
+            "LABEL": "Qualifications",
+            "PLACEHOLDER": "Start writing..."
+        }
+    }
+    
+    VALIDATION = {
+        "JOB_TITLE_REQUIRED": "Job Title can't be blank",
+        "DEPARTMENT_REQUIRED": "Department can't be blank",
+        "APPLY_LINK_REQUIRED": "Apply Link can't be blank",
+        "JOB_TITLE_REQUIRED_TAKEN": "Job Title has already been taken",
+    }
